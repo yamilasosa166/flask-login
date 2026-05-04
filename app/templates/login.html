@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Iniciar sesion · flask-login{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-4">Iniciar sesion</h1>
+        <form method="post" novalidate>
+          <div class="mb-3">
+            <label class="form-label" for="identifier">Usuario o email</label>
+            <input class="form-control" id="identifier" name="identifier" type="text" autocomplete="username" required autofocus>
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="password">Contrasena</label>
+            <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required>
+          </div>
+          <div class="form-check mb-3">
+            <input class="form-check-input" id="remember" name="remember" type="checkbox">
+            <label class="form-check-label" for="remember">Recordarme</label>
+          </div>
+          <button class="btn btn-primary w-100" type="submit">Entrar</button>
+        </form>
+        <hr class="my-4">
+        <p class="text-center mb-0 text-body-secondary">
+          No tenes cuenta? <a href="{{ url_for('auth.register') }}">Registrate</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

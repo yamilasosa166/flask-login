@@ -1,0 +1,33 @@
+name: flask-login
+description: Login simple en Flask con Flask-Login + PostgreSQL en Docker
+tier: proto
+created: 2026-05-04
+
+stack:
+  approach: python
+  runtime: python-3.12
+  web: flask-3
+  api: flask
+  orm: sqlalchemy-2
+  db: postgresql-16
+  auth: flask-login
+  ui: jinja2-bootstrap-5
+  testing: none
+  mobile: none
+  contract: none
+
+features:
+  - register
+  - login
+  - logout
+  - dashboard-protegido
+  - sesion-persistente
+
+integrations:
+  payments: none
+  email: none
+  storage: none
+
+deploy:
+  target: docker-local
+  registry: none
