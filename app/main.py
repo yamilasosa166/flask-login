@@ -104,7 +104,7 @@ def dashboard():
         .where(Venta.fecha >= desde, Venta.fecha <= hasta)
         .order_by(desc(Venta.fecha))
         .limit(10)
-    ).scalars().all()
+    ).scalars().unique().all()
 
     movs_periodo = db.session.execute(
         db.select(Movimiento)

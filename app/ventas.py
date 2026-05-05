@@ -22,7 +22,7 @@ def ventas_list():
         db.select(Venta)
         .where(Venta.fecha >= rng["desde"], Venta.fecha <= rng["hasta"])
         .order_by(desc(Venta.fecha))
-    ).scalars().all()
+    ).scalars().unique().all()
 
     total_periodo = sum(v.total for v in ventas)
     n_ventas = len(ventas)
