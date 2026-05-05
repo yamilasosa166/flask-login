@@ -120,7 +120,8 @@ def producto_nuevo():
             sku=data["sku"],
             nombre=data["nombre"],
             categoria_id=data["categoria_id"],
-            precio=data["precio"],
+            precio_unitario=data["precio_unitario"],
+            precio_pack_caja=data["precio_pack_caja"],
             stock_min=data["stock_min"],
             stock_actual=data["stock_inicial"],
             activo=True,
@@ -162,7 +163,8 @@ def producto_editar(prod_id: int):
         prod.sku = data["sku"]
         prod.nombre = data["nombre"]
         prod.categoria_id = data["categoria_id"]
-        prod.precio = data["precio"]
+        prod.precio_unitario = data["precio_unitario"]
+        prod.precio_pack_caja = data["precio_pack_caja"]
         prod.stock_min = data["stock_min"]
         prod.activo = data["activo"]
         try:
@@ -188,9 +190,14 @@ def _read_producto_form(form, edit: bool = False) -> dict:
         except ValueError:
             categoria_id = None
     try:
-        precio = int(form.get("precio") or 0)
+        precio_unitario = int(form.get("precio_unitario") or 0)
     except ValueError:
-        precio = -1
+        precio_unitario = -1
+    precio_pack_caja_raw = (form.get("precio_pack_caja") or "").strip()
+    try:
+        precio_pack_caja = int(precio_pack_caja_raw) if precio_pack_caja_raw else None
+    except ValueError:
+        precio_pack_caja = -1
     try:
         stock_min = int(form.get("stock_min") or 0)
     except ValueError:
@@ -206,8 +213,10 @@ def _read_producto_form(form, edit: bool = False) -> dict:
         error = "El SKU es obligatorio."
     elif not nombre:
         error = "El nombre es obligatorio."
-    elif precio < 0:
-        error = "El precio debe ser >= 0."
+    elif precio_unitario < 0:
+        error = "El precio unitario debe ser >= 0."
+    elif precio_pack_caja is not None and precio_pack_caja < 0:
+        error = "El precio pack/caja debe ser >= 0."
     elif stock_min < 0:
         error = "El stock minimo debe ser >= 0."
     elif not edit and stock_inicial < 0:
@@ -217,7 +226,8 @@ def _read_producto_form(form, edit: bool = False) -> dict:
         "sku": sku,
         "nombre": nombre,
         "categoria_id": categoria_id,
-        "precio": precio,
+        "precio_unitario": precio_unitario,
+        "precio_pack_caja": precio_pack_caja,
         "stock_min": stock_min,
         "stock_inicial": stock_inicial,
         "activo": activo,

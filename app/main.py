@@ -37,7 +37,7 @@ def dashboard():
     ).scalar_one()
 
     valor_inventario = db.session.execute(
-        db.select(func.coalesce(func.sum(Producto.precio * Producto.stock_actual), 0)).where(
+        db.select(func.coalesce(func.sum(Producto.precio_unitario * Producto.stock_actual), 0)).where(
             Producto.activo.is_(True)
         )
     ).scalar_one()

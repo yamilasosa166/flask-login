@@ -58,8 +58,9 @@ def venta_nueva():
         cliente_nombre = (request.form.get("cliente_nombre") or "").strip() or None
         notas = (request.form.get("notas") or "").strip() or None
 
-        # Recibe arrays paralelos: producto_id[], cantidad[]
+        # Recibe arrays paralelos: producto_id[], tipo_unidad[], cantidad[]
         producto_ids = request.form.getlist("producto_id")
+        tipo_unidades = request.form.getlist("tipo_unidad")
         cantidades = request.form.getlist("cantidad")
 
         items_validos = []
@@ -68,7 +69,7 @@ def venta_nueva():
         if not producto_ids:
             error = "Agrega al menos un producto a la venta."
         else:
-            for pid_raw, cant_raw in zip(producto_ids, cantidades):
+            for pid_raw, tipo_raw, cant_raw in zip(producto_ids, tipo_unidades, cantidades):
                 if not pid_raw or not cant_raw:
                     continue
                 try:
@@ -77,6 +78,7 @@ def venta_nueva():
                 except ValueError:
                     error = "Cantidad o producto invalido."
                     break
+                tipo = tipo_raw if tipo_raw in ("unidad", "pack_caja") else "unidad"
                 if cant <= 0:
                     error = "Las cantidades deben ser mayores a 0."
                     break
@@ -84,10 +86,13 @@ def venta_nueva():
                 if prod is None or not prod.activo:
                     error = "Producto inexistente o inactivo en la venta."
                     break
+                if tipo == "pack_caja" and not prod.precio_pack_caja:
+                    error = f"'{prod.nombre}' no tiene precio de pack/caja configurado."
+                    break
                 if cant > prod.stock_actual:
                     error = f"Stock insuficiente de '{prod.nombre}' (disponible: {prod.stock_actual}, pedido: {cant})."
                     break
-                items_validos.append((prod, cant))
+                items_validos.append((prod, cant, tipo))
 
             if not items_validos and not error:
                 error = "Agrega al menos un producto valido."
@@ -95,17 +100,23 @@ def venta_nueva():
             # Detectar duplicados de producto en la venta — los consolidamos sumando cantidades
             if not error:
                 consolidated = {}
-                for prod, cant in items_validos:
-                    if prod.id in consolidated:
-                        consolidated[prod.id]["cant"] += cant
+                for prod, cant, tipo in items_validos:
+                    key = (prod.id, tipo)
+                    if key in consolidated:
+                        consolidated[key]["cant"] += cant
                     else:
-                        consolidated[prod.id] = {"prod": prod, "cant": cant}
-                # Re-validar stock con totales consolidados
+                        consolidated[key] = {"prod": prod, "cant": cant, "tipo": tipo}
+                # Re-validar stock con totales consolidados (suma de todos los tipos del mismo producto)
+                stock_usado = {}
                 for entry in consolidated.values():
-                    if entry["cant"] > entry["prod"].stock_actual:
-                        error = f"Stock insuficiente de '{entry['prod'].nombre}' (disponible: {entry['prod'].stock_actual}, pedido total: {entry['cant']})."
+                    pid = entry["prod"].id
+                    stock_usado[pid] = stock_usado.get(pid, 0) + entry["cant"]
+                for pid, total_cant in stock_usado.items():
+                    prod = consolidated[next(k for k in consolidated if k[0] == pid)]["prod"]
+                    if total_cant > prod.stock_actual:
+                        error = f"Stock insuficiente de '{prod.nombre}' (disponible: {prod.stock_actual}, pedido total: {total_cant})."
                         break
-                items_validos = [(e["prod"], e["cant"]) for e in consolidated.values()]
+                items_validos = [(e["prod"], e["cant"], e["tipo"]) for e in consolidated.values()]
 
         if error:
             flash(error, "danger")
@@ -125,14 +136,15 @@ def venta_nueva():
         db.session.flush()  # obtener venta.id
 
         total_calc = 0
-        for prod, cant in items_validos:
-            precio_snap = prod.precio
+        for prod, cant, tipo in items_validos:
+            precio_snap = prod.precio_pack_caja if tipo == "pack_caja" else prod.precio_unitario
             subtotal = precio_snap * cant
             total_calc += subtotal
 
             db.session.add(VentaItem(
                 venta_id=venta.id,
                 producto_id=prod.id,
+                tipo_unidad=tipo,
                 cantidad=cant,
                 precio_unitario=precio_snap,
                 subtotal=subtotal,

@@ -23,7 +23,8 @@
             <tr>
               <th>SKU</th>
               <th>Producto</th>
-              <th class="text-end">Precio unit.</th>
+              <th>Tipo</th>
+              <th class="text-end">Precio</th>
               <th class="text-end">Cantidad</th>
               <th class="text-end">Subtotal</th>
             </tr>
@@ -33,6 +34,13 @@
             <tr>
               <td><code class="text-body-secondary">{{ item.producto.sku if item.producto else '?' }}</code></td>
               <td>{{ item.producto.nombre if item.producto else '(producto eliminado)' }}</td>
+              <td>
+                {% if item.tipo_unidad == 'pack_caja' %}
+                  <span class="badge text-bg-secondary">Pack/Caja</span>
+                {% else %}
+                  <span class="badge text-bg-light text-dark">Unidad</span>
+                {% endif %}
+              </td>
               <td class="text-end text-body-secondary">{{ item.precio_unitario|pyg }}</td>
               <td class="text-end">{{ item.cantidad }}</td>
               <td class="text-end fw-semibold">{{ item.subtotal|pyg }}</td>

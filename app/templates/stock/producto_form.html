@@ -28,9 +28,15 @@
               </select>
             </div>
             <div class="col-md-6">
-              <label class="form-label" for="precio">Precio (Gs.)</label>
-              <input class="form-control" id="precio" name="precio" type="number" min="0" step="1"
-                     value="{{ (form.precio if form else (producto.precio if producto else 0)) }}" required>
+              <label class="form-label" for="precio_unitario">Precio unitario (Gs.)</label>
+              <input class="form-control" id="precio_unitario" name="precio_unitario" type="number" min="0" step="1"
+                     value="{{ (form.precio_unitario if form else (producto.precio_unitario if producto else 0)) }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="precio_pack_caja">Precio pack/caja (Gs.) <span class="text-body-secondary fw-normal">opcional</span></label>
+              <input class="form-control" id="precio_pack_caja" name="precio_pack_caja" type="number" min="0" step="1"
+                     value="{{ (form.precio_pack_caja if form else (producto.precio_pack_caja if producto and producto.precio_pack_caja else '')) }}"
+                     placeholder="Dejar vacío si no aplica">
             </div>
             {% if not producto %}
             <div class="col-md-6">

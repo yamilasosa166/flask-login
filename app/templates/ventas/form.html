@@ -2,7 +2,7 @@
 {% block title %}Nueva venta · stock{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-lg-9">
+  <div class="col-lg-10">
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h1 class="h3 mb-0">Nueva venta</h1>
       <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('ventas.ventas_list') }}">Cancelar</a>
@@ -28,6 +28,7 @@
             <thead>
               <tr>
                 <th>Producto</th>
+                <th style="width:140px">Tipo</th>
                 <th class="text-end" style="width:130px">Precio unit.</th>
                 <th style="width:110px">Cantidad</th>
                 <th class="text-end" style="width:140px">Subtotal</th>
@@ -35,16 +36,23 @@
               </tr>
             </thead>
             <tbody id="itemsBody">
-              {# Fila inicial (siempre se muestra una) #}
               <tr class="item-row">
                 <td>
                   <select class="form-select form-select-sm producto-select" name="producto_id" required>
                     <option value="">— elegir —</option>
                     {% for p in productos %}
-                    <option value="{{ p.id }}" data-precio="{{ p.precio }}" data-stock="{{ p.stock_actual }}">
+                    <option value="{{ p.id }}"
+                            data-precio-unitario="{{ p.precio_unitario }}"
+                            data-precio-pack="{{ p.precio_pack_caja or '' }}">
                       {{ p.sku }} · {{ p.nombre }} (stock: {{ p.stock_actual }})
                     </option>
                     {% endfor %}
+                  </select>
+                </td>
+                <td>
+                  <select class="form-select form-select-sm tipo-select" name="tipo_unidad">
+                    <option value="unidad">Unidad</option>
+                    <option value="pack_caja" disabled>Pack/Caja</option>
                   </select>
                 </td>
                 <td class="text-end text-body-secondary precio-cell">—</td>
@@ -61,7 +69,7 @@
             </tbody>
             <tfoot>
               <tr class="table-group-divider">
-                <td colspan="3" class="text-end fw-semibold">Total estimado</td>
+                <td colspan="4" class="text-end fw-semibold">Total estimado</td>
                 <td class="text-end fw-bold fs-5" id="totalDisplay">Gs. 0</td>
                 <td></td>
               </tr>
@@ -104,41 +112,56 @@
 
 <script>
 (function () {
-  const body    = document.getElementById("itemsBody");
-  const btnAdd  = document.getElementById("btnAgregar");
-  const total   = document.getElementById("totalDisplay");
-
-  // Template de opciones de producto (se clona desde la primera fila)
+  const body   = document.getElementById("itemsBody");
+  const btnAdd = document.getElementById("btnAgregar");
+  const total  = document.getElementById("totalDisplay");
   const optsHTML = body.querySelector(".producto-select").innerHTML;
 
   function fmt(n) {
     return "Gs. " + n.toLocaleString("es-PY");
   }
 
+  function updateTipoOptions(row) {
+    const sel  = row.querySelector(".producto-select");
+    const tipo = row.querySelector(".tipo-select");
+    const opt  = sel.selectedOptions[0];
+    const packPrecio = opt && opt.dataset.preciopack ? parseInt(opt.dataset.preciopack, 10) : null;
+
+    const packOpt = tipo.querySelector('option[value="pack_caja"]');
+    if (packPrecio) {
+      packOpt.disabled = false;
+      packOpt.textContent = "Pack/Caja";
+    } else {
+      packOpt.disabled = true;
+      if (tipo.value === "pack_caja") tipo.value = "unidad";
+      packOpt.textContent = "Pack/Caja (no configurado)";
+    }
+  }
+
   function recalc() {
     let sum = 0;
     body.querySelectorAll(".item-row").forEach(row => {
-      const sel  = row.querySelector(".producto-select");
-      const cant = row.querySelector(".cantidad-input");
-      const opt  = sel.selectedOptions[0];
-      const precioCell    = row.querySelector(".precio-cell");
-      const subtotalCell  = row.querySelector(".subtotal-cell");
+      const sel   = row.querySelector(".producto-select");
+      const tipo  = row.querySelector(".tipo-select");
+      const cant  = row.querySelector(".cantidad-input");
+      const opt   = sel.selectedOptions[0];
+      const precioCell   = row.querySelector(".precio-cell");
+      const subtotalCell = row.querySelector(".subtotal-cell");
 
       if (opt && opt.value) {
-        const precio   = parseInt(opt.dataset.precio || "0", 10);
+        const precioUnitario = parseInt(opt.dataset.precioUnitario || "0", 10);
+        const precioPack     = opt.dataset.preciopack ? parseInt(opt.dataset.preciopack, 10) : null;
+        const precio = (tipo.value === "pack_caja" && precioPack) ? precioPack : precioUnitario;
         const cantidad = Math.max(1, parseInt(cant.value || "1", 10));
-        const sub      = precio * cantidad;
+
+        // Clamp al stock
+        const stock = parseInt(opt.dataset.stock || "999999", 10);
+        if (parseInt(cant.value, 10) > stock) { cant.value = stock; }
+
+        const sub = precio * cantidad;
         precioCell.textContent   = fmt(precio);
         subtotalCell.textContent = fmt(sub);
         sum += sub;
-
-        // Clamp cantidad al stock disponible
-        const stock = parseInt(opt.dataset.stock || "0", 10);
-        if (parseInt(cant.value, 10) > stock) {
-          cant.value = stock;
-          recalc();
-          return;
-        }
       } else {
         precioCell.textContent   = "—";
         subtotalCell.textContent = "—";
@@ -163,6 +186,12 @@
           ${optsHTML}
         </select>
       </td>
+      <td>
+        <select class="form-select form-select-sm tipo-select" name="tipo_unidad">
+          <option value="unidad">Unidad</option>
+          <option value="pack_caja" disabled>Pack/Caja (no configurado)</option>
+        </select>
+      </td>
       <td class="text-end text-body-secondary precio-cell">—</td>
       <td>
         <input class="form-control form-control-sm cantidad-input" name="cantidad" type="number" min="1" step="1" value="1" required>
@@ -180,16 +209,19 @@
   }
 
   function bindRow(row) {
-    row.querySelector(".producto-select").addEventListener("change", recalc);
+    row.querySelector(".producto-select").addEventListener("change", () => {
+      updateTipoOptions(row);
+      recalc();
+    });
+    row.querySelector(".tipo-select").addEventListener("change", recalc);
     row.querySelector(".cantidad-input").addEventListener("input", recalc);
-    row.querySelector(".btn-remove").addEventListener("click", function () {
+    row.querySelector(".btn-remove").addEventListener("click", () => {
       row.remove();
       updateRemoveButtons();
       recalc();
     });
   }
 
-  // Bind fila inicial
   bindRow(body.querySelector(".item-row"));
   btnAdd.addEventListener("click", addRow);
   recalc();
