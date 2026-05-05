@@ -34,6 +34,12 @@
                      value="{{ (form.stock_min if form else (producto.stock_min if producto else 0)) }}">
               <div class="form-text">Avisa cuando el stock baje a este nivel.</div>
             </div>
+            <div class="col-md-6">
+              <label class="form-label" for="precio_costo">Precio de costo (Gs.)</label>
+              <input class="form-control" id="precio_costo" name="precio_costo" type="number" min="0" step="1"
+                     value="{{ (form.precio_costo if form else (producto.precio_costo if producto else 0)) }}">
+              <div class="form-text">Costo de adquisición. Solo visible para admin.</div>
+            </div>
             {% if not producto %}
             <div class="col-md-6">
               <label class="form-label" for="stock_inicial">Stock inicial</label>

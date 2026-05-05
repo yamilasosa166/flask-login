@@ -123,6 +123,7 @@ def producto_nuevo():
             nombre=data["nombre"],
             categoria_id=data["categoria_id"],
             stock_min=data["stock_min"],
+            precio_costo=data["precio_costo"],
             stock_actual=data["stock_inicial"],
             activo=True,
         )
@@ -165,6 +166,7 @@ def producto_editar(prod_id: int):
         prod.nombre = data["nombre"]
         prod.categoria_id = data["categoria_id"]
         prod.stock_min = data["stock_min"]
+        prod.precio_costo = data["precio_costo"]
         prod.activo = data["activo"]
         try:
             _save_tipos_precio(prod.id, data["tipo_nombres"], data["tipo_precios"])
@@ -200,6 +202,10 @@ def _read_producto_form(form, edit: bool = False) -> dict:
     except ValueError:
         stock_min = -1
     try:
+        precio_costo = int(form.get("precio_costo") or 0)
+    except ValueError:
+        precio_costo = -1
+    try:
         stock_inicial = int(form.get("stock_inicial") or 0)
     except ValueError:
         stock_inicial = -1
@@ -232,6 +238,8 @@ def _read_producto_form(form, edit: bool = False) -> dict:
         error = "Los precios deben ser >= 0."
     elif stock_min < 0:
         error = "El stock minimo debe ser >= 0."
+    elif precio_costo < 0:
+        error = "El precio de costo debe ser >= 0."
     elif not edit and stock_inicial < 0:
         error = "El stock inicial debe ser >= 0."
 
@@ -242,6 +250,7 @@ def _read_producto_form(form, edit: bool = False) -> dict:
         "tipo_nombres": tipo_nombres,
         "tipo_precios": tipo_precios,
         "stock_min": stock_min,
+        "precio_costo": precio_costo,
         "stock_inicial": stock_inicial,
         "activo": activo,
         "error": error,

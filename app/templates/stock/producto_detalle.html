@@ -115,17 +115,40 @@
 
           <dt class="col-5 text-body-secondary">Estado</dt>
           <dd class="col-7">{{ 'activo' if prod.activo else 'inactivo' }}</dd>
+          {% if current_user.is_admin and prod.precio_costo %}
+          <dt class="col-5 text-body-secondary">Precio costo</dt>
+          <dd class="col-7">{{ prod.precio_costo|pyg }}</dd>
+          {% endif %}
         </dl>
       </div>
       {% if prod.tipos_precio %}
-      <div class="card-footer">
-        <div class="text-body-secondary small mb-1">Precios</div>
-        {% for t in prod.tipos_precio %}
-        <div class="d-flex justify-content-between">
-          <span class="text-body-secondary">{{ t.nombre }}</span>
-          <span class="fw-semibold">{{ t.precio|pyg }}</span>
-        </div>
-        {% endfor %}
+      <div class="card-footer p-0">
+        <table class="table table-sm mb-0">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th class="text-end">Precio</th>
+              {% if current_user.is_admin and prod.precio_costo %}<th class="text-end">Ganancia</th><th class="text-end">%</th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in prod.tipos_precio %}
+            {% set m = prod.margen_de(t.precio) %}
+            <tr>
+              <td class="text-body-secondary">{{ t.nombre }}</td>
+              <td class="text-end fw-semibold">{{ t.precio|pyg }}</td>
+              {% if current_user.is_admin and prod.precio_costo %}
+              <td class="text-end {% if m.ganancia >= 0 %}text-success{% else %}text-danger{% endif %}">
+                {{ m.ganancia|pyg }}
+              </td>
+              <td class="text-end {% if m.pct >= 0 %}text-success{% else %}text-danger{% endif %}">
+                {{ m.pct }}%
+              </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
       {% endif %}
     </div>

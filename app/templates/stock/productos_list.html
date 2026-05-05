@@ -38,6 +38,7 @@
           <th>Nombre</th>
           <th>Categoria</th>
           <th>Precios</th>
+          {% if current_user.is_admin %}<th class="text-end">Costo</th><th class="text-end">Margen</th>{% endif %}
           <th class="text-end">Stock</th>
           <th class="text-end">Min</th>
           <th>Estado</th>
@@ -57,6 +58,21 @@
               <span class="text-body-secondary">—</span>
             {% endfor %}
           </td>
+          {% if current_user.is_admin %}
+          <td class="text-end text-body-secondary">
+            {{ p.precio_costo|pyg if p.precio_costo else '—' }}
+          </td>
+          <td class="text-end">
+            {% if p.precio_costo and p.precio_base %}
+              {% set m = p.margen_de(p.precio_base) %}
+              <span class="{% if m.ganancia >= 0 %}text-success{% else %}text-danger{% endif %} fw-semibold">
+                {{ m.pct }}%
+              </span>
+            {% else %}
+              <span class="text-body-secondary">—</span>
+            {% endif %}
+          </td>
+          {% endif %}
           <td class="text-end {% if p.stock_bajo and p.activo %}text-warning fw-semibold{% endif %}">{{ p.stock_actual }}</td>
           <td class="text-end text-body-secondary">{{ p.stock_min }}</td>
           <td>

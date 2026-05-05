@@ -32,24 +32,46 @@
               <th class="text-end">Precio</th>
               <th class="text-end">Cantidad</th>
               <th class="text-end">Subtotal</th>
+              {% if current_user.is_admin %}<th class="text-end text-success">Ganancia</th>{% endif %}
             </tr>
           </thead>
           <tbody>
+            {% set total_ganancia = namespace(val=0) %}
             {% for item in venta.items %}
+            {% set prod = item.producto %}
+            {% if current_user.is_admin and prod and prod.precio_costo %}
+              {% set ganancia_item = (item.precio_unitario - prod.precio_costo) * item.cantidad %}
+              {% set total_ganancia.val = total_ganancia.val + ganancia_item %}
+            {% endif %}
             <tr>
-              <td><code class="text-body-secondary">{{ item.producto.sku if item.producto else '?' }}</code></td>
-              <td>{{ item.producto.nombre if item.producto else '(producto eliminado)' }}</td>
+              <td><code class="text-body-secondary">{{ prod.sku if prod else '?' }}</code></td>
+              <td>{{ prod.nombre if prod else '(producto eliminado)' }}</td>
               <td><span class="badge text-bg-secondary">{{ item.tipo_precio_nombre }}</span></td>
               <td class="text-end text-body-secondary">{{ item.precio_unitario|pyg }}</td>
               <td class="text-end">{{ item.cantidad }}</td>
               <td class="text-end fw-semibold">{{ item.subtotal|pyg }}</td>
+              {% if current_user.is_admin %}
+              <td class="text-end">
+                {% if prod and prod.precio_costo %}
+                  {% set g = (item.precio_unitario - prod.precio_costo) * item.cantidad %}
+                  <span class="{% if g >= 0 %}text-success{% else %}text-danger{% endif %}">{{ g|pyg }}</span>
+                {% else %}
+                  <span class="text-body-secondary">—</span>
+                {% endif %}
+              </td>
+              {% endif %}
             </tr>
             {% endfor %}
           </tbody>
           <tfoot>
             <tr class="table-group-divider">
-              <td colspan="4" class="text-end fw-semibold">Total</td>
-              <td class="text-end fw-bold fs-5">{{ venta.total|pyg }}</td>
+              <td colspan="{% if current_user.is_admin %}4{% else %}4{% endif %}" class="text-end fw-semibold">Total</td>
+              <td class="text-end fw-bold fs-5" colspan="2">{{ venta.total|pyg }}</td>
+              {% if current_user.is_admin %}
+              <td class="text-end fw-bold {% if total_ganancia.val >= 0 %}text-success{% else %}text-danger{% endif %}">
+                {{ total_ganancia.val|pyg }}
+              </td>
+              {% endif %}
             </tr>
           </tfoot>
         </table>
@@ -70,6 +92,12 @@
           <dd class="col-7">{{ venta.cantidad_items }}</dd>
           <dt class="col-5 text-body-secondary">Total</dt>
           <dd class="col-7 fw-semibold">{{ venta.total|pyg }}</dd>
+          {% if current_user.is_admin and total_ganancia.val %}
+          <dt class="col-5 text-body-secondary">Ganancia</dt>
+          <dd class="col-7 fw-semibold {% if total_ganancia.val >= 0 %}text-success{% else %}text-danger{% endif %}">
+            {{ total_ganancia.val|pyg }}
+          </dd>
+          {% endif %}
         </dl>
       </div>
     </div>

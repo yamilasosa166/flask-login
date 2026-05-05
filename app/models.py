@@ -58,6 +58,7 @@ class Producto(db.Model):
     categoria_id = db.Column(db.Integer, db.ForeignKey("categorias.id", ondelete="RESTRICT"), nullable=True, index=True)
     stock_actual = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     stock_min = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    precio_costo = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     activo = db.Column(db.Boolean, nullable=False, default=True, server_default="true")
     created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
 
@@ -82,8 +83,13 @@ class Producto(db.Model):
 
     @property
     def precio_base(self) -> int:
-        """Primer tipo de precio disponible, para valuación de inventario."""
         return self.tipos_precio[0].precio if self.tipos_precio else 0
+
+    def margen_de(self, precio_venta: int) -> dict:
+        """Ganancia y % de margen dado un precio de venta."""
+        ganancia = precio_venta - self.precio_costo
+        pct = round(ganancia * 100 / precio_venta, 1) if precio_venta > 0 else 0.0
+        return {"ganancia": ganancia, "pct": pct}
 
     def __repr__(self) -> str:
         return f"<Producto {self.sku} {self.nombre}>"
