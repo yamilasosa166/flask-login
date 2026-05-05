@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
-from sqlalchemy import asc, desc, or_, delete
+from sqlalchemy import asc, desc, or_, delete, func
 from sqlalchemy.exc import IntegrityError
 from . import db
 from .models import Categoria, Producto, TipoPrecio, Movimiento
@@ -249,6 +249,38 @@ def _read_producto_form(form, edit: bool = False) -> dict:
 # ----------------------------------------------------------------------------
 # Movimientos
 # ----------------------------------------------------------------------------
+
+@stock_bp.route("/productos/<int:prod_id>")
+@login_required
+def producto_detalle(prod_id: int):
+    prod = db.session.get(Producto, prod_id) or abort(404)
+    tipo = request.args.get("tipo") or ""
+
+    stmt = db.select(Movimiento).where(Movimiento.producto_id == prod_id)
+    if tipo in {"entrada", "salida", "ajuste"}:
+        stmt = stmt.where(Movimiento.tipo == tipo)
+    stmt = stmt.order_by(desc(Movimiento.fecha)).limit(200)
+    movimientos = db.session.execute(stmt).scalars().all()
+
+    stats_rows = db.session.execute(
+        db.select(
+            Movimiento.tipo,
+            func.count(Movimiento.id).label("count"),
+            func.sum(Movimiento.cantidad).label("total"),
+        )
+        .where(Movimiento.producto_id == prod_id)
+        .group_by(Movimiento.tipo)
+    ).all()
+    stats = {row.tipo: {"count": row.count, "total": row.total} for row in stats_rows}
+
+    return render_template(
+        "stock/producto_detalle.html",
+        prod=prod,
+        movimientos=movimientos,
+        tipo=tipo,
+        stats=stats,
+    )
+
 
 @stock_bp.route("/movimientos")
 @login_required

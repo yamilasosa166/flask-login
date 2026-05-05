@@ -82,9 +82,10 @@
           <td class="text-end">{{ v.cantidad_items }}</td>
           <td class="text-end fw-semibold">{{ v.total|pyg }}</td>
           <td class="text-body-secondary small">{{ v.usuario.username if v.usuario else '?' }}</td>
-          <td class="text-end">
-            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('ventas.venta_detalle', venta_id=v.id) }}">
-              Ver
+          <td class="text-end text-nowrap">
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('ventas.venta_detalle', venta_id=v.id) }}">Ver</a>
+            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('ventas.venta_ticket', venta_id=v.id) }}" target="_blank">
+              <i class="bi bi-printer"></i>
             </a>
           </td>
         </tr>

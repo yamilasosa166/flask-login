@@ -8,9 +8,14 @@
       {{ venta.fecha.strftime('%d/%m/%Y %H:%M') }} — registrada por {{ venta.usuario.username if venta.usuario else '?' }}
     </small>
   </div>
-  <a class="btn btn-outline-secondary" href="{{ url_for('ventas.ventas_list') }}">
-    <i class="bi bi-arrow-left"></i> Volver
-  </a>
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-primary" href="{{ url_for('ventas.venta_ticket', venta_id=venta.id) }}" target="_blank">
+      <i class="bi bi-printer"></i> Imprimir ticket
+    </a>
+    <a class="btn btn-outline-secondary" href="{{ url_for('ventas.ventas_list') }}">
+      <i class="bi bi-arrow-left"></i> Volver
+    </a>
+  </div>
 </div>
 
 <div class="row g-4">

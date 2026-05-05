@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ticket #{{ venta.id }}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11px;
+      color: #000;
+      background: #fff;
+    }
+
+    /* ---- Vista previa en pantalla ---- */
+    @media screen {
+      body {
+        width: 80mm;
+        min-height: 60mm;
+        margin: 20px auto;
+        padding: 6mm 5mm;
+        border: 1px dashed #aaa;
+        box-shadow: 0 2px 8px rgba(0,0,0,.15);
+      }
+      .btn-print {
+        display: block;
+        width: 100%;
+        margin-top: 6mm;
+        padding: 4px;
+        background: #222;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        font-size: 12px;
+        border-radius: 3px;
+      }
+      .btn-print:hover { background: #000; }
+    }
+
+    /* ---- Impresión 80mm ---- */
+    @media print {
+      @page { size: 80mm auto; margin: 4mm 5mm; }
+      body { width: 70mm; }
+      .btn-print { display: none; }
+    }
+
+    /* ---- Layout del ticket ---- */
+    .store-name {
+      font-size: 15px;
+      font-weight: bold;
+      text-align: center;
+      letter-spacing: 0.5px;
+      margin-bottom: 1.5mm;
+    }
+
+    .divider-solid { border: none; border-top: 1px solid #000; margin: 2mm 0; }
+    .divider-dash  { border: none; border-top: 1px dashed #000; margin: 2mm 0; }
+
+    .meta { line-height: 1.6; }
+
+    .items { width: 100%; border-collapse: collapse; }
+    .items td { vertical-align: top; padding: 1mm 0; }
+    .items .td-name  { width: 100%; }
+    .items .td-right { white-space: nowrap; padding-left: 2mm; text-align: right; }
+
+    .item-sub {
+      display: flex;
+      justify-content: space-between;
+      padding-left: 2mm;
+      color: #333;
+    }
+
+    .total-block {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-top: 1mm;
+    }
+    .total-label { font-weight: bold; font-size: 13px; }
+    .total-value { font-weight: bold; font-size: 14px; }
+
+    .footer { text-align: center; color: #333; line-height: 1.8; }
+    .cut-space { height: 8mm; }
+  </style>
+</head>
+<body>
+
+  <div class="store-name">{{ store_name }}</div>
+
+  <hr class="divider-solid">
+
+  <div class="meta">
+    <strong>TICKET #{{ "%04d" | format(venta.id) }}</strong><br>
+    {{ venta.fecha.strftime('%d/%m/%Y  %H:%M') }}<br>
+    {% if venta.cliente_nombre %}
+    Cliente: {{ venta.cliente_nombre }}<br>
+    {% endif %}
+    Atendido por: {{ venta.usuario.username if venta.usuario else '?' }}
+  </div>
+
+  <hr class="divider-dash">
+
+  <table class="items">
+    <tbody>
+      {% for item in venta.items %}
+      <tr>
+        <td colspan="2" class="td-name">
+          {{ item.producto.nombre if item.producto else '(producto eliminado)' }}
+          {% if item.tipo_precio_nombre and item.tipo_precio_nombre != 'Unidad' %}
+          <small>({{ item.tipo_precio_nombre }})</small>
+          {% endif %}
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <div class="item-sub">
+            <span>{{ item.cantidad }} x {{ item.precio_unitario|pyg }}</span>
+            <span>{{ item.subtotal|pyg }}</span>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <hr class="divider-solid">
+
+  <div class="total-block">
+    <span class="total-label">TOTAL</span>
+    <span class="total-value">{{ venta.total|pyg }}</span>
+  </div>
+
+  {% if venta.notas %}
+  <hr class="divider-dash">
+  <div class="footer">{{ venta.notas }}</div>
+  {% endif %}
+
+  <hr class="divider-dash">
+  <div class="footer">¡Gracias por su compra!</div>
+
+  <div class="cut-space"></div>
+
+  <button class="btn-print" onclick="window.print()">🖨 Imprimir ticket</button>
+
+  <script>
+    window.addEventListener('load', function () {
+      window.print();
+    });
+  </script>
+</body>
+</html>

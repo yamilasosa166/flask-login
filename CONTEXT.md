@@ -4,6 +4,8 @@
 Sistema simple de gestion de inventario sobre el login: productos, categorias, movimientos (entrada/salida/ajuste) con auditoria de stock, permisos por rol y registro de ventas multi-producto.
 
 ## Completado
+- Vista detalle de producto: ficha + historial de movimientos filtrables (por tipo) + resumen estadístico
+- Impresión de ticket de venta: página standalone 80mm con auto-print + botón manual. Variable STORE_NAME en .env
 - Auth: registro, login, logout, dashboard protegido
 - Hash con werkzeug, sesion con Flask-Login
 - Roles `admin` / `operador` (primer registrado queda como admin)
@@ -37,8 +39,7 @@ Sistema simple de gestion de inventario sobre el login: productos, categorias, m
 - Tests con pytest
 - Reset de password por email
 - Export de inventario a CSV
-- Vista detalle de producto con historial de movimientos
-- Paginacion en listas (hoy lista completa, hard limit 200 en movimientos)
+- Vista detalle de producto: paginacion del historial (hoy hard limit 200)
 - Reportes: valuacion historica, alertas configurables
 
 ## Blockers

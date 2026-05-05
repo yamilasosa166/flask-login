@@ -1,3 +1,4 @@
+import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
 from sqlalchemy import asc, desc, func
@@ -45,6 +46,14 @@ def ventas_list():
 def venta_detalle(venta_id: int):
     venta = db.session.get(Venta, venta_id) or abort(404)
     return render_template("ventas/detalle.html", venta=venta)
+
+
+@ventas_bp.route("/<int:venta_id>/ticket")
+@login_required
+def venta_ticket(venta_id: int):
+    venta = db.session.get(Venta, venta_id) or abort(404)
+    store_name = os.environ.get("STORE_NAME", "Mi Negocio")
+    return render_template("ventas/ticket.html", venta=venta, store_name=store_name)
 
 
 @ventas_bp.route("/nueva", methods=["GET", "POST"])

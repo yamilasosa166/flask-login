@@ -60,6 +60,7 @@
             {% else %}<span class="badge text-bg-success">ok</span>{% endif %}
           </td>
           <td class="text-end">
+            <a class="btn btn-sm btn-outline-primary" href="{{ url_for('stock.producto_detalle', prod_id=p.id) }}">Ver</a>
             <a class="btn btn-sm btn-success" href="{{ url_for('stock.movimiento_nuevo', producto_id=p.id) }}">Movimiento</a>
             {% if current_user.is_admin %}
             <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('stock.producto_editar', prod_id=p.id) }}">Editar</a>
