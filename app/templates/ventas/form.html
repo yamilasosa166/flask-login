@@ -125,7 +125,7 @@
     const sel  = row.querySelector(".producto-select");
     const tipo = row.querySelector(".tipo-select");
     const opt  = sel.selectedOptions[0];
-    const packPrecio = opt && opt.dataset.preciopack ? parseInt(opt.dataset.preciopack, 10) : null;
+    const packPrecio = opt && opt.dataset.precioPack ? parseInt(opt.dataset.precioPack, 10) : null;
 
     const packOpt = tipo.querySelector('option[value="pack_caja"]');
     if (packPrecio) {
@@ -150,7 +150,7 @@
 
       if (opt && opt.value) {
         const precioUnitario = parseInt(opt.dataset.precioUnitario || "0", 10);
-        const precioPack     = opt.dataset.preciopack ? parseInt(opt.dataset.preciopack, 10) : null;
+        const precioPack     = opt.dataset.precioPack ? parseInt(opt.dataset.precioPack, 10) : null;
         const precio = (tipo.value === "pack_caja" && precioPack) ? precioPack : precioUnitario;
         const cantidad = Math.max(1, parseInt(cant.value || "1", 10));
 
