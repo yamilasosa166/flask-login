@@ -13,7 +13,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(16), nullable=False, default="operador", server_default="operador")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
 
     movimientos = db.relationship("Movimiento", back_populates="usuario", lazy="dynamic")
 
@@ -41,7 +41,7 @@ class Categoria(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(80), unique=True, nullable=False, index=True)
     descripcion = db.Column(db.String(255), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
 
     productos = db.relationship("Producto", back_populates="categoria", lazy="dynamic")
 
@@ -59,7 +59,7 @@ class Producto(db.Model):
     stock_actual = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     stock_min = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     activo = db.Column(db.Boolean, nullable=False, default=True, server_default="true")
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now, nullable=False)
 
     categoria = db.relationship("Categoria", back_populates="productos")
     movimientos = db.relationship("Movimiento", back_populates="producto", lazy="dynamic", cascade="all, delete-orphan")
@@ -119,7 +119,7 @@ class Movimiento(db.Model):
     stock_anterior = db.Column(db.Integer, nullable=False)
     stock_resultante = db.Column(db.Integer, nullable=False)
     motivo = db.Column(db.String(255), nullable=True)
-    fecha = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    fecha = db.Column(db.DateTime, default=datetime.now, nullable=False, index=True)
 
     producto = db.relationship("Producto", back_populates="movimientos")
     usuario = db.relationship("User", back_populates="movimientos")
@@ -143,7 +143,7 @@ class Venta(db.Model):
     notas = db.Column(db.String(255), nullable=True)
     total = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     usuario_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
-    fecha = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    fecha = db.Column(db.DateTime, default=datetime.now, nullable=False, index=True)
 
     items = db.relationship(
         "VentaItem",
