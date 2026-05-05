@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Alertas de stock · stock{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h3 mb-1">Alertas de stock</h1>
+    <small class="text-body-secondary">Productos activos cuyo stock actual alcanzó o bajó del mínimo configurado</small>
+  </div>
+  <div class="d-flex gap-2">
+    {% if criticos %}
+    <form method="post" action="{{ url_for('reportes.alertas_enviar') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-warning">
+        <i class="bi bi-envelope-exclamation"></i> Enviar alerta por email
+      </button>
+    </form>
+    {% endif %}
+    <a class="btn btn-outline-secondary" href="{{ url_for('stock.productos_list') }}">
+      <i class="bi bi-arrow-left"></i> Productos
+    </a>
+  </div>
+</div>
+
+{# KPI #}
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card text-center {% if criticos %}border-warning{% endif %}">
+      <div class="card-body py-4">
+        <div class="fs-2 fw-bold {% if criticos %}text-warning{% else %}text-success{% endif %}">
+          {{ criticos|length }}
+        </div>
+        <div class="text-body-secondary mt-1">
+          {% if criticos %}Producto(s) en stock crítico{% else %}Todo el stock está OK{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if criticos %}
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <strong>Productos en stock crítico</strong>
+    <small class="text-body-secondary">El stock mínimo se configura en cada producto</small>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Producto</th>
+          <th>Categoría</th>
+          <th class="text-end">Stock actual</th>
+          <th class="text-end">Stock mínimo</th>
+          <th class="text-end">Diferencia</th>
+          <th class="text-end">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in criticos %}
+        {% set diff = p.stock_actual - p.stock_min %}
+        <tr>
+          <td><code class="text-body-secondary">{{ p.sku }}</code></td>
+          <td>{{ p.nombre }}</td>
+          <td class="text-body-secondary">{{ p.categoria.nombre if p.categoria else '—' }}</td>
+          <td class="text-end fw-semibold text-warning">{{ p.stock_actual }}</td>
+          <td class="text-end text-body-secondary">{{ p.stock_min }}</td>
+          <td class="text-end fw-semibold {% if diff < 0 %}text-danger{% else %}text-warning{% endif %}">
+            {{ diff }}
+          </td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-success" href="{{ url_for('stock.movimiento_nuevo', producto_id=p.id) }}">
+              <i class="bi bi-plus-lg"></i> Ingreso
+            </a>
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('stock.producto_editar', prod_id=p.id) }}">
+              <i class="bi bi-pencil"></i> Mínimo
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="alert alert-secondary mt-3">
+  <i class="bi bi-info-circle me-1"></i>
+  El <strong>stock mínimo</strong> de cada producto se configura desde <a href="{{ url_for('stock.productos_list') }}" class="alert-link">Productos → Editar</a>.
+  Ajustalo para afinar las alertas.
+</div>
+
+{% else %}
+<div class="alert alert-success">
+  <i class="bi bi-check-circle me-2"></i>
+  <strong>¡Todo en orden!</strong> Ningún producto activo está en stock crítico en este momento.
+</div>
+{% endif %}
+
+{% endblock %}

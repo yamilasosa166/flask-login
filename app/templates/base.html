@@ -25,6 +25,15 @@
           <li class="nav-item"><a class="nav-link" href="{{ url_for('stock.categorias_list') }}">Categorias</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('stock.movimientos_list') }}">Movimientos</a></li>
           <li class="nav-item"><a class="nav-link" href="{{ url_for('ventas.ventas_list') }}">Ventas</a></li>
+          {% if current_user.is_admin %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Reportes</a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="{{ url_for('reportes.valuacion') }}"><i class="bi bi-graph-up me-2"></i>Valuación de inventario</a></li>
+              <li><a class="dropdown-item" href="{{ url_for('reportes.alertas') }}"><i class="bi bi-exclamation-triangle me-2"></i>Alertas de stock</a></li>
+            </ul>
+          </li>
+          {% endif %}
           <li class="nav-item"><a class="nav-link btn-sm btn btn-success text-white px-3 ms-2" href="{{ url_for('ventas.venta_nueva') }}">+ Venta</a></li>
         </ul>
         <div class="d-flex align-items-center">
@@ -58,5 +67,6 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

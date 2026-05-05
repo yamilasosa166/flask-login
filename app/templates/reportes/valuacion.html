@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}Valuación de inventario · stock{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h3 mb-1">Valuación de inventario</h1>
+    <small class="text-body-secondary">Solo productos activos con precio de costo definido</small>
+  </div>
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('stock.productos_list') }}">
+    <i class="bi bi-arrow-left"></i> Productos
+  </a>
+</div>
+
+{# KPIs #}
+<div class="row g-3 mb-4">
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body py-4">
+        <div class="fs-2 fw-bold text-success">{{ total_valor|pyg }}</div>
+        <div class="text-body-secondary mt-1">Valor total del inventario</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body py-4">
+        <div class="fs-2 fw-bold">{{ con_costo|length }}</div>
+        <div class="text-body-secondary mt-1">Productos valuados</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-center">
+      <div class="card-body py-4">
+        <div class="fs-2 fw-bold {% if sin_costo %}text-warning{% endif %}">{{ sin_costo|length }}</div>
+        <div class="text-body-secondary mt-1">Sin precio de costo</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  {# Gráfico histórico #}
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><strong>Tendencia últimos 30 días</strong></div>
+      <div class="card-body">
+        <canvas id="chartValuacion" height="100"></canvas>
+      </div>
+    </div>
+  </div>
+
+  {# Desglose por categoría #}
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header"><strong>Por categoría</strong></div>
+      {% if por_categoria %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Categoría</th>
+              <th class="text-end">Prods</th>
+              <th class="text-end">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for nombre, info in por_categoria %}
+            <tr>
+              <td>{{ nombre }}</td>
+              <td class="text-end text-body-secondary">{{ info.count }}</td>
+              <td class="text-end fw-semibold">{{ info.valor|pyg }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr class="table-group-divider">
+              <td class="fw-semibold">Total</td>
+              <td class="text-end text-body-secondary">{{ con_costo|length }}</td>
+              <td class="text-end fw-bold text-success">{{ total_valor|pyg }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body text-body-secondary">No hay productos con costo definido.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Tabla detalle #}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Detalle de productos valuados</strong>
+        <small class="text-body-secondary">precio costo × stock actual</small>
+      </div>
+      {% if con_costo %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 table-sm">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Producto</th>
+              <th>Categoría</th>
+              <th class="text-end">Costo unit.</th>
+              <th class="text-end">Stock</th>
+              <th class="text-end fw-semibold">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in con_costo %}
+            <tr>
+              <td><code class="text-body-secondary">{{ p.sku }}</code></td>
+              <td>
+                <a href="{{ url_for('stock.producto_detalle', prod_id=p.id) }}" class="text-decoration-none">
+                  {{ p.nombre }}
+                </a>
+                {% if p.stock_bajo %}<span class="badge text-bg-warning ms-1">stock bajo</span>{% endif %}
+              </td>
+              <td class="text-body-secondary">{{ p.categoria.nombre if p.categoria else '—' }}</td>
+              <td class="text-end text-body-secondary">{{ p.precio_costo|pyg }}</td>
+              <td class="text-end">{{ p.stock_actual }}</td>
+              <td class="text-end fw-semibold">{{ (p.stock_actual * p.precio_costo)|pyg }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body text-body-secondary">No hay productos con precio de costo definido.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Productos sin costo #}
+  {% if sin_costo %}
+  <div class="col-12">
+    <div class="card border-warning">
+      <div class="card-header text-warning">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        <strong>{{ sin_costo|length }} producto(s) sin precio de costo — excluidos de la valuación</strong>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>SKU</th><th>Producto</th><th>Stock</th><th class="text-end">Acción</th></tr></thead>
+          <tbody>
+            {% for p in sin_costo %}
+            <tr>
+              <td><code class="text-body-secondary">{{ p.sku }}</code></td>
+              <td>{{ p.nombre }}</td>
+              <td>{{ p.stock_actual }}</td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('stock.producto_editar', prod_id=p.id) }}">
+                  <i class="bi bi-pencil"></i> Agregar costo
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const labels = {{ labels | tojson }};
+  const values = {{ values | tojson }};
+
+  function fmtPYG(v) {
+    return "Gs. " + Math.round(v).toLocaleString("es-PY").replace(/\./g, ".");
+  }
+
+  new Chart(document.getElementById("chartValuacion"), {
+    type: "line",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Valor inventario",
+        data: values,
+        fill: true,
+        backgroundColor: "rgba(25, 135, 84, 0.12)",
+        borderColor: "rgb(25, 135, 84)",
+        borderWidth: 2,
+        pointRadius: 3,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => fmtPYG(ctx.parsed.y)
+          }
+        }
+      },
+      scales: {
+        y: {
+          ticks: {
+            callback: v => {
+              if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + "M";
+              if (v >= 1_000) return (v / 1_000).toFixed(0) + "k";
+              return v;
+            }
+          },
+          beginAtZero: false,
+        }
+      }
+    }
+  });
+})();
+</script>
+{% endblock %}

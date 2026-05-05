@@ -51,9 +51,11 @@ def create_app() -> Flask:
     from .main import main_bp
     from .stock import stock_bp
     from .ventas import ventas_bp
+    from .reportes import reportes_bp
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(stock_bp)
     app.register_blueprint(ventas_bp)
+    app.register_blueprint(reportes_bp)
 
     return app
