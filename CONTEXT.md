@@ -4,6 +4,9 @@
 Sistema simple de gestion de inventario sobre el login: productos, categorias, movimientos (entrada/salida/ajuste) con auditoria de stock, permisos por rol y registro de ventas multi-producto.
 
 ## Completado
+- CSRF tokens en todos los forms POST (Flask-WTF 1.2.2)
+- Rate limiting en /login: 10 POST por minuto por IP (Flask-Limiter 3.10.1)
+- Export CSV de inventario: GET /stock/productos/export.csv — todos los productos con precios
 - Vista detalle de producto: ficha + historial de movimientos filtrables (por tipo) + resumen estadístico
 - Impresión de ticket de venta: página standalone 80mm con auto-print + botón manual. Variable STORE_NAME en .env
 - Auth: registro, login, logout, dashboard protegido
@@ -34,11 +37,8 @@ Sistema simple de gestion de inventario sobre el login: productos, categorias, m
 - Fix CRLF en `docker/entrypoint.sh` via Dockerfile (`sed -i 's/\r//'`)
 
 ## Pendiente
-- CSRF tokens en forms (Flask-WTF)
-- Rate limiting en /login (Flask-Limiter)
 - Tests con pytest
 - Reset de password por email
-- Export de inventario a CSV
 - Vista detalle de producto: paginacion del historial (hoy hard limit 200)
 - Reportes: valuacion historica, alertas configurables
 

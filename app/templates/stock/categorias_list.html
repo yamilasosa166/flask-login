@@ -24,6 +24,7 @@
             <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('stock.categoria_editar', cat_id=c.id) }}">Editar</a>
             <form class="d-inline" method="post" action="{{ url_for('stock.categoria_eliminar', cat_id=c.id) }}"
                   onsubmit="return confirm('Eliminar categoria {{ c.nombre }}?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button class="btn btn-sm btn-outline-danger" type="submit">Eliminar</button>
             </form>
             {% endif %}

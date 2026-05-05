@@ -7,6 +7,7 @@
       <div class="card-body p-4">
         <h1 class="h4 mb-4">{{ 'Editar' if categoria else 'Nueva' }} categoria</h1>
         <form method="post" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="mb-3">
             <label class="form-label" for="nombre">Nombre</label>
             <input class="form-control" id="nombre" name="nombre" maxlength="80"

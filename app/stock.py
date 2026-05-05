@@ -1,4 +1,6 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
+import csv
+import io
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, Response
 from flask_login import login_required, current_user
 from sqlalchemy import asc, desc, or_, delete, func
 from sqlalchemy.exc import IntegrityError
@@ -249,6 +251,35 @@ def _read_producto_form(form, edit: bool = False) -> dict:
 # ----------------------------------------------------------------------------
 # Movimientos
 # ----------------------------------------------------------------------------
+
+@stock_bp.route("/productos/export.csv")
+@login_required
+def productos_export_csv():
+    productos = db.session.execute(
+        db.select(Producto).order_by(asc(Producto.nombre))
+    ).scalars().all()
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["SKU", "Nombre", "Categoria", "Stock actual", "Stock minimo", "Estado", "Precios"])
+    for p in productos:
+        precios = " | ".join(f"{t.nombre}: Gs. {t.precio:,}".replace(",", ".") for t in p.tipos_precio)
+        w.writerow([
+            p.sku,
+            p.nombre,
+            p.categoria.nombre if p.categoria else "",
+            p.stock_actual,
+            p.stock_min,
+            "activo" if p.activo else "inactivo",
+            precios,
+        ])
+
+    return Response(
+        buf.getvalue(),
+        mimetype="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=inventario.csv"},
+    )
+
 
 @stock_bp.route("/productos/<int:prod_id>")
 @login_required
