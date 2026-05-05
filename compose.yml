@@ -39,14 +39,13 @@ services:
       start_period: 10s
       retries: 5
 
-  # Cliente web visual de DB. No se levanta por defecto — solo con:
-  #   docker compose --profile tools up -d adminer
-  # Luego abrir http://localhost:8080
+  # Cliente web visual de DB. Arranca siempre con `docker compose up`.
+  # Login: System=PostgreSQL, Server=db, User=$POSTGRES_USER, DB=$POSTGRES_DB
+  # No exponer este puerto en prod.
   adminer:
     image: adminer:4-standalone
     container_name: flask-login-adminer
     restart: unless-stopped
-    profiles: ["tools"]
     depends_on:
       db:
         condition: service_healthy
