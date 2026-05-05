@@ -2,7 +2,7 @@
 {% block title %}{{ 'Editar' if producto else 'Nuevo' }} producto · stock{% endblock %}
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-8">
+  <div class="col-md-9">
     <div class="card">
       <div class="card-body p-4">
         <h1 class="h4 mb-4">{{ 'Editar' if producto else 'Nuevo' }} producto</h1>
@@ -19,24 +19,19 @@
                      value="{{ (form.nombre if form else (producto.nombre if producto else '')) or '' }}" required>
             </div>
             <div class="col-md-6">
-              <label class="form-label" for="categoria_id">Categoria</label>
+              <label class="form-label" for="categoria_id">Categoría</label>
               <select class="form-select" id="categoria_id" name="categoria_id">
-                <option value="">— sin categoria —</option>
+                <option value="">— sin categoría —</option>
                 {% for c in categorias %}
                 <option value="{{ c.id }}" {% if (form and form.categoria_id|int == c.id) or (producto and producto.categoria_id == c.id) %}selected{% endif %}>{{ c.nombre }}</option>
                 {% endfor %}
               </select>
             </div>
             <div class="col-md-6">
-              <label class="form-label" for="precio_unitario">Precio unitario (Gs.)</label>
-              <input class="form-control" id="precio_unitario" name="precio_unitario" type="number" min="0" step="1"
-                     value="{{ (form.precio_unitario if form else (producto.precio_unitario if producto else 0)) }}" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label" for="precio_pack_caja">Precio pack/caja (Gs.) <span class="text-body-secondary fw-normal">opcional</span></label>
-              <input class="form-control" id="precio_pack_caja" name="precio_pack_caja" type="number" min="0" step="1"
-                     value="{{ (form.precio_pack_caja if form else (producto.precio_pack_caja if producto and producto.precio_pack_caja else '')) }}"
-                     placeholder="Dejar vacío si no aplica">
+              <label class="form-label" for="stock_min">Stock mínimo</label>
+              <input class="form-control" id="stock_min" name="stock_min" type="number" min="0" step="1"
+                     value="{{ (form.stock_min if form else (producto.stock_min if producto else 0)) }}">
+              <div class="form-text">Avisa cuando el stock baje a este nivel.</div>
             </div>
             {% if not producto %}
             <div class="col-md-6">
@@ -46,12 +41,6 @@
               <div class="form-text">Si es &gt; 0 se registra como movimiento de entrada.</div>
             </div>
             {% endif %}
-            <div class="col-md-6">
-              <label class="form-label" for="stock_min">Stock minimo</label>
-              <input class="form-control" id="stock_min" name="stock_min" type="number" min="0" step="1"
-                     value="{{ (form.stock_min if form else (producto.stock_min if producto else 0)) }}">
-              <div class="form-text">Avisa cuando el stock baje a este nivel.</div>
-            </div>
             {% if producto %}
             <div class="col-12">
               <div class="form-check form-switch">
@@ -60,6 +49,46 @@
               </div>
             </div>
             {% endif %}
+
+            {# --- Tipos de precio --- #}
+            <div class="col-12">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label mb-0">Tipos de precio <span class="text-danger">*</span></label>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btnAddTipo">
+                  <i class="bi bi-plus-lg"></i> Agregar tipo
+                </button>
+              </div>
+              <div class="card">
+                <div class="table-responsive">
+                  <table class="table table-sm align-middle mb-0">
+                    <thead>
+                      <tr>
+                        <th>Nombre <span class="text-body-secondary fw-normal small">(ej: Unidad, Pack x6, Promo 3x10k)</span></th>
+                        <th style="width:160px">Precio (Gs.)</th>
+                        <th style="width:48px"></th>
+                      </tr>
+                    </thead>
+                    <tbody id="tiposBody">
+                      {% if producto and producto.tipos_precio %}
+                        {% for t in producto.tipos_precio %}
+                        <tr class="tipo-row">
+                          <td><input class="form-control form-control-sm" type="text" name="tipo_nombre" value="{{ t.nombre }}" placeholder="Ej: Unidad" maxlength="60" required></td>
+                          <td><input class="form-control form-control-sm" type="number" name="tipo_precio" value="{{ t.precio }}" min="0" step="1" required></td>
+                          <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-tipo"><i class="bi bi-x-lg"></i></button></td>
+                        </tr>
+                        {% endfor %}
+                      {% else %}
+                        <tr class="tipo-row">
+                          <td><input class="form-control form-control-sm" type="text" name="tipo_nombre" value="Unidad" placeholder="Ej: Unidad" maxlength="60" required></td>
+                          <td><input class="form-control form-control-sm" type="number" name="tipo_precio" value="0" min="0" step="1" required></td>
+                          <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-tipo" disabled><i class="bi bi-x-lg"></i></button></td>
+                        </tr>
+                      {% endif %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="d-flex gap-2 mt-4">
@@ -71,4 +100,39 @@
     </div>
   </div>
 </div>
+
+<script>
+(function () {
+  const body = document.getElementById("tiposBody");
+  const btn  = document.getElementById("btnAddTipo");
+
+  function updateRemove() {
+    const rows = body.querySelectorAll(".tipo-row");
+    rows.forEach(r => { r.querySelector(".btn-remove-tipo").disabled = rows.length === 1; });
+  }
+
+  function bindRow(row) {
+    row.querySelector(".btn-remove-tipo").addEventListener("click", () => {
+      row.remove();
+      updateRemove();
+    });
+  }
+
+  btn.addEventListener("click", () => {
+    const row = document.createElement("tr");
+    row.className = "tipo-row";
+    row.innerHTML = `
+      <td><input class="form-control form-control-sm" type="text" name="tipo_nombre" placeholder="Ej: Pack x6" maxlength="60" required></td>
+      <td><input class="form-control form-control-sm" type="number" name="tipo_precio" value="0" min="0" step="1" required></td>
+      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-tipo"><i class="bi bi-x-lg"></i></button></td>`;
+    body.appendChild(row);
+    bindRow(row);
+    updateRemove();
+    row.querySelector("input[name='tipo_nombre']").focus();
+  });
+
+  body.querySelectorAll(".tipo-row").forEach(bindRow);
+  updateRemove();
+})();
+</script>
 {% endblock %}

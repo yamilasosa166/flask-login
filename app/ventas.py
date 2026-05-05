@@ -51,16 +51,24 @@ def venta_detalle(venta_id: int):
 @login_required
 def venta_nueva():
     productos = db.session.execute(
-        db.select(Producto).where(Producto.activo.is_(True), Producto.stock_actual > 0).order_by(asc(Producto.nombre))
+        db.select(Producto)
+        .where(Producto.activo.is_(True), Producto.stock_actual > 0)
+        .order_by(asc(Producto.nombre))
     ).scalars().all()
+
+    # Mapa producto_id -> lista de tipos para el JS del formulario
+    tipos_por_producto = {
+        p.id: [{"nombre": t.nombre, "precio": t.precio} for t in p.tipos_precio]
+        for p in productos
+    }
 
     if request.method == "POST":
         cliente_nombre = (request.form.get("cliente_nombre") or "").strip() or None
         notas = (request.form.get("notas") or "").strip() or None
 
-        # Recibe arrays paralelos: producto_id[], tipo_unidad[], cantidad[]
+        # Arrays paralelos: producto_id[], tipo_precio_nombre[], cantidad[]
         producto_ids = request.form.getlist("producto_id")
-        tipo_unidades = request.form.getlist("tipo_unidad")
+        tipo_nombres = request.form.getlist("tipo_precio_nombre")
         cantidades = request.form.getlist("cantidad")
 
         items_validos = []
@@ -69,7 +77,7 @@ def venta_nueva():
         if not producto_ids:
             error = "Agrega al menos un producto a la venta."
         else:
-            for pid_raw, tipo_raw, cant_raw in zip(producto_ids, tipo_unidades, cantidades):
+            for pid_raw, tipo_nombre, cant_raw in zip(producto_ids, tipo_nombres, cantidades):
                 if not pid_raw or not cant_raw:
                     continue
                 try:
@@ -78,7 +86,6 @@ def venta_nueva():
                 except ValueError:
                     error = "Cantidad o producto invalido."
                     break
-                tipo = tipo_raw if tipo_raw in ("unidad", "pack_caja") else "unidad"
                 if cant <= 0:
                     error = "Las cantidades deben ser mayores a 0."
                     break
@@ -86,8 +93,9 @@ def venta_nueva():
                 if prod is None or not prod.activo:
                     error = "Producto inexistente o inactivo en la venta."
                     break
-                if tipo == "pack_caja" and not prod.precio_pack_caja:
-                    error = f"'{prod.nombre}' no tiene precio de pack/caja configurado."
+                tipo = next((t for t in prod.tipos_precio if t.nombre == tipo_nombre), None)
+                if tipo is None:
+                    error = f"Tipo de precio '{tipo_nombre}' no existe para '{prod.nombre}'."
                     break
                 if cant > prod.stock_actual:
                     error = f"Stock insuficiente de '{prod.nombre}' (disponible: {prod.stock_actual}, pedido: {cant})."
@@ -97,22 +105,22 @@ def venta_nueva():
             if not items_validos and not error:
                 error = "Agrega al menos un producto valido."
 
-            # Detectar duplicados de producto en la venta — los consolidamos sumando cantidades
             if not error:
+                # Consolidar duplicados (mismo producto + mismo tipo)
                 consolidated = {}
                 for prod, cant, tipo in items_validos:
-                    key = (prod.id, tipo)
+                    key = (prod.id, tipo.nombre)
                     if key in consolidated:
                         consolidated[key]["cant"] += cant
                     else:
                         consolidated[key] = {"prod": prod, "cant": cant, "tipo": tipo}
-                # Re-validar stock con totales consolidados (suma de todos los tipos del mismo producto)
+                # Re-validar stock total por producto
                 stock_usado = {}
                 for entry in consolidated.values():
                     pid = entry["prod"].id
                     stock_usado[pid] = stock_usado.get(pid, 0) + entry["cant"]
                 for pid, total_cant in stock_usado.items():
-                    prod = consolidated[next(k for k in consolidated if k[0] == pid)]["prod"]
+                    prod = next(e["prod"] for e in consolidated.values() if e["prod"].id == pid)
                     if total_cant > prod.stock_actual:
                         error = f"Stock insuficiente de '{prod.nombre}' (disponible: {prod.stock_actual}, pedido total: {total_cant})."
                         break
@@ -121,11 +129,12 @@ def venta_nueva():
         if error:
             flash(error, "danger")
             return render_template(
-                "ventas/form.html", productos=productos,
+                "ventas/form.html",
+                productos=productos,
+                tipos_por_producto=tipos_por_producto,
                 form=request.form,
             ), 400
 
-        # Crear venta + items + movimientos en transaccion unica
         venta = Venta(
             cliente_nombre=cliente_nombre,
             notas=notas,
@@ -133,24 +142,23 @@ def venta_nueva():
             total=0,
         )
         db.session.add(venta)
-        db.session.flush()  # obtener venta.id
+        db.session.flush()
 
         total_calc = 0
         for prod, cant, tipo in items_validos:
-            precio_snap = prod.precio_pack_caja if tipo == "pack_caja" else prod.precio_unitario
+            precio_snap = tipo.precio
             subtotal = precio_snap * cant
             total_calc += subtotal
 
             db.session.add(VentaItem(
                 venta_id=venta.id,
                 producto_id=prod.id,
-                tipo_unidad=tipo,
+                tipo_precio_nombre=tipo.nombre,
                 cantidad=cant,
                 precio_unitario=precio_snap,
                 subtotal=subtotal,
             ))
 
-            # Generar movimiento de salida ligado a la venta
             stock_anterior = prod.stock_actual
             prod.stock_actual = stock_anterior - cant
             db.session.add(Movimiento(
@@ -170,9 +178,9 @@ def venta_nueva():
         except IntegrityError as e:
             db.session.rollback()
             flash(f"Error al guardar la venta: {e.orig}", "danger")
-            return render_template("ventas/form.html", productos=productos, form=request.form), 500
+            return render_template("ventas/form.html", productos=productos, tipos_por_producto=tipos_por_producto, form=request.form), 500
 
         flash(f"Venta #{venta.id} registrada — {total_calc:,} Gs.".replace(",", "."), "success")
         return redirect(url_for("ventas.venta_detalle", venta_id=venta.id))
 
-    return render_template("ventas/form.html", productos=productos, form=None)
+    return render_template("ventas/form.html", productos=productos, tipos_por_producto=tipos_por_producto, form=None)

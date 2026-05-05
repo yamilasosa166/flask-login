@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, request
 from flask_login import login_required, current_user
 from sqlalchemy import func, desc, asc
 from . import db
-from .models import Producto, Movimiento, Venta, VentaItem
+from .models import Producto, Movimiento, Venta, VentaItem, TipoPrecio
 from .time_filters import parse_range
 
 main_bp = Blueprint("main", __name__)
@@ -36,10 +36,15 @@ def dashboard():
         )
     ).scalar_one()
 
+    precio_base_subq = (
+        db.select(func.coalesce(func.min(TipoPrecio.precio), 0))
+        .where(TipoPrecio.producto_id == Producto.id)
+        .correlate(Producto)
+        .scalar_subquery()
+    )
     valor_inventario = db.session.execute(
-        db.select(func.coalesce(func.sum(Producto.precio_unitario * Producto.stock_actual), 0)).where(
-            Producto.activo.is_(True)
-        )
+        db.select(func.coalesce(func.sum(precio_base_subq * Producto.stock_actual), 0))
+        .where(Producto.activo.is_(True))
     ).scalar_one()
 
     # KPIs filtrados al rango

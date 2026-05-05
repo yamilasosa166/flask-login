@@ -1,9 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
 from flask_login import login_required, current_user
-from sqlalchemy import asc, desc, or_
+from sqlalchemy import asc, desc, or_, delete
 from sqlalchemy.exc import IntegrityError
 from . import db
-from .models import Categoria, Producto, Movimiento
+from .models import Categoria, Producto, TipoPrecio, Movimiento
 from .decorators import admin_required
 from .time_filters import parse_range
 
@@ -120,8 +120,6 @@ def producto_nuevo():
             sku=data["sku"],
             nombre=data["nombre"],
             categoria_id=data["categoria_id"],
-            precio_unitario=data["precio_unitario"],
-            precio_pack_caja=data["precio_pack_caja"],
             stock_min=data["stock_min"],
             stock_actual=data["stock_inicial"],
             activo=True,
@@ -129,6 +127,7 @@ def producto_nuevo():
         db.session.add(prod)
         try:
             db.session.flush()
+            _save_tipos_precio(prod.id, data["tipo_nombres"], data["tipo_precios"])
             if data["stock_inicial"] > 0:
                 db.session.add(Movimiento(
                     producto_id=prod.id,
@@ -163,11 +162,10 @@ def producto_editar(prod_id: int):
         prod.sku = data["sku"]
         prod.nombre = data["nombre"]
         prod.categoria_id = data["categoria_id"]
-        prod.precio_unitario = data["precio_unitario"]
-        prod.precio_pack_caja = data["precio_pack_caja"]
         prod.stock_min = data["stock_min"]
         prod.activo = data["activo"]
         try:
+            _save_tipos_precio(prod.id, data["tipo_nombres"], data["tipo_precios"])
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
@@ -176,6 +174,12 @@ def producto_editar(prod_id: int):
         flash("Producto actualizado.", "success")
         return redirect(url_for("stock.productos_list"))
     return render_template("stock/producto_form.html", producto=prod, categorias=categorias, form=None)
+
+
+def _save_tipos_precio(producto_id: int, nombres: list, precios: list) -> None:
+    db.session.execute(delete(TipoPrecio).where(TipoPrecio.producto_id == producto_id))
+    for nombre, precio in zip(nombres, precios):
+        db.session.add(TipoPrecio(producto_id=producto_id, nombre=nombre, precio=precio))
 
 
 def _read_producto_form(form, edit: bool = False) -> dict:
@@ -190,15 +194,6 @@ def _read_producto_form(form, edit: bool = False) -> dict:
         except ValueError:
             categoria_id = None
     try:
-        precio_unitario = int(form.get("precio_unitario") or 0)
-    except ValueError:
-        precio_unitario = -1
-    precio_pack_caja_raw = (form.get("precio_pack_caja") or "").strip()
-    try:
-        precio_pack_caja = int(precio_pack_caja_raw) if precio_pack_caja_raw else None
-    except ValueError:
-        precio_pack_caja = -1
-    try:
         stock_min = int(form.get("stock_min") or 0)
     except ValueError:
         stock_min = -1
@@ -208,15 +203,31 @@ def _read_producto_form(form, edit: bool = False) -> dict:
         stock_inicial = -1
     activo = form.get("activo") == "on" if edit else True
 
+    # Tipos de precio: arrays paralelos tipo_nombre[] y tipo_precio[]
+    tipo_nombres_raw = form.getlist("tipo_nombre")
+    tipo_precios_raw = form.getlist("tipo_precio")
+    tipo_nombres = []
+    tipo_precios = []
+    for n, p in zip(tipo_nombres_raw, tipo_precios_raw):
+        n = n.strip()
+        if not n:
+            continue
+        try:
+            precio = int(p or 0)
+        except ValueError:
+            precio = -1
+        tipo_nombres.append(n)
+        tipo_precios.append(precio)
+
     error = None
     if not sku:
         error = "El SKU es obligatorio."
     elif not nombre:
         error = "El nombre es obligatorio."
-    elif precio_unitario < 0:
-        error = "El precio unitario debe ser >= 0."
-    elif precio_pack_caja is not None and precio_pack_caja < 0:
-        error = "El precio pack/caja debe ser >= 0."
+    elif not tipo_nombres:
+        error = "Debe agregar al menos un tipo de precio."
+    elif any(p < 0 for p in tipo_precios):
+        error = "Los precios deben ser >= 0."
     elif stock_min < 0:
         error = "El stock minimo debe ser >= 0."
     elif not edit and stock_inicial < 0:
@@ -226,8 +237,8 @@ def _read_producto_form(form, edit: bool = False) -> dict:
         "sku": sku,
         "nombre": nombre,
         "categoria_id": categoria_id,
-        "precio_unitario": precio_unitario,
-        "precio_pack_caja": precio_pack_caja,
+        "tipo_nombres": tipo_nombres,
+        "tipo_precios": tipo_precios,
         "stock_min": stock_min,
         "stock_inicial": stock_inicial,
         "activo": activo,
@@ -302,7 +313,6 @@ def movimiento_nuevo():
                 else:
                     nuevo_stock = stock_anterior - cantidad
             elif tipo == "ajuste":
-                # Ajuste = nuevo stock absoluto (cantidad reemplaza stock_actual)
                 nuevo_stock = cantidad
 
         if error:

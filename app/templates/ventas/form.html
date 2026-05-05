@@ -15,7 +15,6 @@
     {% else %}
     <form method="post" novalidate id="ventaForm">
 
-      {# --- Ítems --- #}
       <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
           <strong>Productos</strong>
@@ -24,12 +23,12 @@
           </button>
         </div>
         <div class="table-responsive">
-          <table class="table align-middle mb-0" id="itemsTable">
+          <table class="table align-middle mb-0">
             <thead>
               <tr>
                 <th>Producto</th>
-                <th style="width:140px">Tipo</th>
-                <th class="text-end" style="width:130px">Precio unit.</th>
+                <th style="width:200px">Tipo de precio</th>
+                <th class="text-end" style="width:130px">Precio</th>
                 <th style="width:110px">Cantidad</th>
                 <th class="text-end" style="width:140px">Subtotal</th>
                 <th style="width:48px"></th>
@@ -41,18 +40,13 @@
                   <select class="form-select form-select-sm producto-select" name="producto_id" required>
                     <option value="">— elegir —</option>
                     {% for p in productos %}
-                    <option value="{{ p.id }}"
-                            data-precio-unitario="{{ p.precio_unitario }}"
-                            data-precio-pack="{{ p.precio_pack_caja or '' }}">
-                      {{ p.sku }} · {{ p.nombre }} (stock: {{ p.stock_actual }})
-                    </option>
+                    <option value="{{ p.id }}">{{ p.sku }} · {{ p.nombre }} (stock: {{ p.stock_actual }})</option>
                     {% endfor %}
                   </select>
                 </td>
                 <td>
-                  <select class="form-select form-select-sm tipo-select" name="tipo_unidad">
-                    <option value="unidad">Unidad</option>
-                    <option value="pack_caja" disabled>Pack/Caja</option>
+                  <select class="form-select form-select-sm tipo-select" name="tipo_precio_nombre" required>
+                    <option value="">— elegir producto —</option>
                   </select>
                 </td>
                 <td class="text-end text-body-secondary precio-cell">—</td>
@@ -78,7 +72,6 @@
         </div>
       </div>
 
-      {# --- Datos opcionales --- #}
       <div class="card mb-4">
         <div class="card-header"><strong>Datos opcionales</strong></div>
         <div class="card-body">
@@ -111,120 +104,102 @@
 </div>
 
 <script>
-(function () {
-  const body   = document.getElementById("itemsBody");
-  const btnAdd = document.getElementById("btnAgregar");
-  const total  = document.getElementById("totalDisplay");
-  const optsHTML = body.querySelector(".producto-select").innerHTML;
+const TIPOS = {{ tipos_por_producto | tojson }};
+const OPTS_HTML = document.querySelector(".producto-select").innerHTML;
 
-  function fmt(n) {
-    return "Gs. " + n.toLocaleString("es-PY");
+function fmt(n) {
+  return "Gs. " + n.toLocaleString("es-PY");
+}
+
+function loadTipos(row, productoId) {
+  const tipoSelect = row.querySelector(".tipo-select");
+  const tipos = TIPOS[productoId] || [];
+  if (tipos.length) {
+    tipoSelect.innerHTML = tipos.map(t =>
+      `<option value="${t.nombre}" data-precio="${t.precio}">${t.nombre} — ${fmt(t.precio)}</option>`
+    ).join("");
+  } else {
+    tipoSelect.innerHTML = '<option value="">Sin precios configurados</option>';
   }
+  recalcRow(row);
+}
 
-  function updateTipoOptions(row) {
-    const sel  = row.querySelector(".producto-select");
-    const tipo = row.querySelector(".tipo-select");
-    const opt  = sel.selectedOptions[0];
-    const packPrecio = opt && opt.dataset.precioPack ? parseInt(opt.dataset.precioPack, 10) : null;
+function recalcRow(row) {
+  const tipoOpt = row.querySelector(".tipo-select").selectedOptions[0];
+  const cant    = parseInt(row.querySelector(".cantidad-input").value || "1", 10);
+  const precio  = tipoOpt && tipoOpt.dataset.precio ? parseInt(tipoOpt.dataset.precio, 10) : 0;
+  row.querySelector(".precio-cell").textContent   = tipoOpt && tipoOpt.value ? fmt(precio) : "—";
+  row.querySelector(".subtotal-cell").textContent = tipoOpt && tipoOpt.value ? fmt(precio * cant) : "—";
+}
 
-    const packOpt = tipo.querySelector('option[value="pack_caja"]');
-    if (packPrecio) {
-      packOpt.disabled = false;
-      packOpt.textContent = "Pack/Caja";
-    } else {
-      packOpt.disabled = true;
-      if (tipo.value === "pack_caja") tipo.value = "unidad";
-      packOpt.textContent = "Pack/Caja (no configurado)";
-    }
-  }
+function recalcTotal() {
+  let sum = 0;
+  document.querySelectorAll(".item-row").forEach(row => {
+    const tipoOpt = row.querySelector(".tipo-select").selectedOptions[0];
+    const cant    = parseInt(row.querySelector(".cantidad-input").value || "1", 10);
+    const precio  = tipoOpt && tipoOpt.dataset.precio ? parseInt(tipoOpt.dataset.precio, 10) : 0;
+    if (tipoOpt && tipoOpt.value) sum += precio * cant;
+  });
+  document.getElementById("totalDisplay").textContent = fmt(sum);
+}
 
-  function recalc() {
-    let sum = 0;
-    body.querySelectorAll(".item-row").forEach(row => {
-      const sel   = row.querySelector(".producto-select");
-      const tipo  = row.querySelector(".tipo-select");
-      const cant  = row.querySelector(".cantidad-input");
-      const opt   = sel.selectedOptions[0];
-      const precioCell   = row.querySelector(".precio-cell");
-      const subtotalCell = row.querySelector(".subtotal-cell");
+function bindRow(row) {
+  row.querySelector(".producto-select").addEventListener("change", e => {
+    loadTipos(row, e.target.value);
+    recalcTotal();
+  });
+  row.querySelector(".tipo-select").addEventListener("change", () => {
+    recalcRow(row);
+    recalcTotal();
+  });
+  row.querySelector(".cantidad-input").addEventListener("input", () => {
+    recalcRow(row);
+    recalcTotal();
+  });
+  row.querySelector(".btn-remove").addEventListener("click", () => {
+    row.remove();
+    updateRemove();
+    recalcTotal();
+  });
+}
 
-      if (opt && opt.value) {
-        const precioUnitario = parseInt(opt.dataset.precioUnitario || "0", 10);
-        const precioPack     = opt.dataset.precioPack ? parseInt(opt.dataset.precioPack, 10) : null;
-        const precio = (tipo.value === "pack_caja" && precioPack) ? precioPack : precioUnitario;
-        const cantidad = Math.max(1, parseInt(cant.value || "1", 10));
+function updateRemove() {
+  const rows = document.querySelectorAll(".item-row");
+  rows.forEach(r => { r.querySelector(".btn-remove").disabled = rows.length === 1; });
+}
 
-        // Clamp al stock
-        const stock = parseInt(opt.dataset.stock || "999999", 10);
-        if (parseInt(cant.value, 10) > stock) { cant.value = stock; }
+function addRow() {
+  const body = document.getElementById("itemsBody");
+  const row  = document.createElement("tr");
+  row.className = "item-row";
+  row.innerHTML = `
+    <td>
+      <select class="form-select form-select-sm producto-select" name="producto_id" required>
+        ${OPTS_HTML}
+      </select>
+    </td>
+    <td>
+      <select class="form-select form-select-sm tipo-select" name="tipo_precio_nombre" required>
+        <option value="">— elegir producto —</option>
+      </select>
+    </td>
+    <td class="text-end text-body-secondary precio-cell">—</td>
+    <td>
+      <input class="form-control form-control-sm cantidad-input" name="cantidad" type="number" min="1" step="1" value="1" required>
+    </td>
+    <td class="text-end fw-semibold subtotal-cell">—</td>
+    <td class="text-center">
+      <button type="button" class="btn btn-sm btn-outline-danger btn-remove" tabindex="-1">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </td>`;
+  body.appendChild(row);
+  bindRow(row);
+  updateRemove();
+  row.querySelector(".producto-select").focus();
+}
 
-        const sub = precio * cantidad;
-        precioCell.textContent   = fmt(precio);
-        subtotalCell.textContent = fmt(sub);
-        sum += sub;
-      } else {
-        precioCell.textContent   = "—";
-        subtotalCell.textContent = "—";
-      }
-    });
-    total.textContent = fmt(sum);
-  }
-
-  function updateRemoveButtons() {
-    const rows = body.querySelectorAll(".item-row");
-    rows.forEach(r => {
-      r.querySelector(".btn-remove").disabled = rows.length === 1;
-    });
-  }
-
-  function addRow() {
-    const row = document.createElement("tr");
-    row.className = "item-row";
-    row.innerHTML = `
-      <td>
-        <select class="form-select form-select-sm producto-select" name="producto_id" required>
-          ${optsHTML}
-        </select>
-      </td>
-      <td>
-        <select class="form-select form-select-sm tipo-select" name="tipo_unidad">
-          <option value="unidad">Unidad</option>
-          <option value="pack_caja" disabled>Pack/Caja (no configurado)</option>
-        </select>
-      </td>
-      <td class="text-end text-body-secondary precio-cell">—</td>
-      <td>
-        <input class="form-control form-control-sm cantidad-input" name="cantidad" type="number" min="1" step="1" value="1" required>
-      </td>
-      <td class="text-end fw-semibold subtotal-cell">—</td>
-      <td class="text-center">
-        <button type="button" class="btn btn-sm btn-outline-danger btn-remove" tabindex="-1">
-          <i class="bi bi-x-lg"></i>
-        </button>
-      </td>`;
-    body.appendChild(row);
-    bindRow(row);
-    updateRemoveButtons();
-    row.querySelector(".producto-select").focus();
-  }
-
-  function bindRow(row) {
-    row.querySelector(".producto-select").addEventListener("change", () => {
-      updateTipoOptions(row);
-      recalc();
-    });
-    row.querySelector(".tipo-select").addEventListener("change", recalc);
-    row.querySelector(".cantidad-input").addEventListener("input", recalc);
-    row.querySelector(".btn-remove").addEventListener("click", () => {
-      row.remove();
-      updateRemoveButtons();
-      recalc();
-    });
-  }
-
-  bindRow(body.querySelector(".item-row"));
-  btnAdd.addEventListener("click", addRow);
-  recalc();
-})();
+document.getElementById("btnAgregar").addEventListener("click", addRow);
+document.querySelectorAll(".item-row").forEach(bindRow);
 </script>
 {% endblock %}

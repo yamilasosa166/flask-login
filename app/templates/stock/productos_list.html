@@ -32,8 +32,7 @@
           <th>SKU</th>
           <th>Nombre</th>
           <th>Categoria</th>
-          <th class="text-end">Precio unit.</th>
-          <th class="text-end">Precio pack/caja</th>
+          <th>Precios</th>
           <th class="text-end">Stock</th>
           <th class="text-end">Min</th>
           <th>Estado</th>
@@ -46,8 +45,13 @@
           <td><code>{{ p.sku }}</code></td>
           <td>{{ p.nombre }}</td>
           <td class="text-body-secondary">{{ p.categoria.nombre if p.categoria else '—' }}</td>
-          <td class="text-end">{{ p.precio_unitario|pyg }}</td>
-          <td class="text-end text-body-secondary">{{ p.precio_pack_caja|pyg if p.precio_pack_caja else '—' }}</td>
+          <td>
+            {% for t in p.tipos_precio %}
+              <span class="badge text-bg-secondary me-1">{{ t.nombre }}: {{ t.precio|pyg }}</span>
+            {% else %}
+              <span class="text-body-secondary">—</span>
+            {% endfor %}
+          </td>
           <td class="text-end {% if p.stock_bajo and p.activo %}text-warning fw-semibold{% endif %}">{{ p.stock_actual }}</td>
           <td class="text-end text-body-secondary">{{ p.stock_min }}</td>
           <td>
