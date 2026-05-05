@@ -1,12 +1,31 @@
 {% extends "base.html" %}
 {% block title %}Dashboard · stock{% endblock %}
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h1 class="h3 mb-0">Dashboard</h1>
-  <small class="text-body-secondary">Hola, {{ current_user.username }}</small>
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <div>
+    <h1 class="h3 mb-0">Dashboard</h1>
+    <small class="text-body-secondary">{{ rng.label }} · {{ current_user.username }}</small>
+  </div>
+  <div class="d-flex flex-wrap align-items-center gap-2">
+    <div class="btn-group btn-group-sm">
+      <a class="btn btn-outline-secondary {% if rng.preset == 'hoy' %}active{% endif %}" href="?preset=hoy">Hoy</a>
+      <a class="btn btn-outline-secondary {% if rng.preset == '7d' %}active{% endif %}" href="?preset=7d">7 días</a>
+      <a class="btn btn-outline-secondary {% if rng.preset == '30d' %}active{% endif %}" href="?preset=30d">30 días</a>
+      <a class="btn btn-outline-secondary {% if rng.preset == 'mes' %}active{% endif %}" href="?preset=mes">Este mes</a>
+      <a class="btn btn-outline-secondary {% if rng.preset == 'anio' %}active{% endif %}" href="?preset=anio">Este año</a>
+    </div>
+    <form class="d-flex align-items-center gap-1" method="get">
+      <input type="hidden" name="preset" value="custom">
+      <input class="form-control form-control-sm" type="date" name="desde" value="{{ rng.desde_iso }}" style="width:140px">
+      <span class="text-body-secondary">→</span>
+      <input class="form-control form-control-sm" type="date" name="hasta" value="{{ rng.hasta_iso }}" style="width:140px">
+      <button class="btn btn-sm btn-outline-primary" type="submit">OK</button>
+    </form>
+  </div>
 </div>
 
-<div class="row g-3 mb-4">
+{# KPIs fila 1 — Stock (siempre actuales) #}
+<div class="row g-3 mb-3">
   <div class="col-6 col-md-3">
     <div class="card h-100"><div class="card-body">
       <div class="text-body-secondary small">Productos activos</div>
@@ -21,60 +40,134 @@
   </div>
   <div class="col-6 col-md-3">
     <div class="card h-100"><div class="card-body">
-      <div class="text-body-secondary small">Movimientos hoy</div>
-      <div class="h3 mb-0">{{ movimientos_hoy }}</div>
-    </div></div>
-  </div>
-  <div class="col-6 col-md-3">
-    <div class="card h-100"><div class="card-body">
       <div class="text-body-secondary small">Valor inventario</div>
       <div class="h5 mb-0">{{ valor_inventario|pyg }}</div>
     </div></div>
   </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-body-secondary small">Movimientos</div>
+      <div class="h3 mb-0">{{ movimientos_count }}</div>
+    </div></div>
+  </div>
 </div>
 
-<div class="row g-4">
-  <div class="col-lg-6">
+{# KPIs fila 2 — Ventas (filtradas por rango) #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card h-100 border-success-subtle"><div class="card-body">
+      <div class="text-body-secondary small">Ventas</div>
+      <div class="h3 mb-0">{{ ventas_count }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100 border-success-subtle"><div class="card-body">
+      <div class="text-body-secondary small">Ingresos</div>
+      <div class="h5 mb-0 text-success">{{ ventas_total|pyg }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-body-secondary small">Ítems vendidos</div>
+      <div class="h3 mb-0">{{ ventas_items }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-body-secondary small">Ticket promedio</div>
+      <div class="h5 mb-0">{{ ticket_promedio|pyg }}</div>
+    </div></div>
+  </div>
+</div>
+
+{# Chart + Top productos #}
+<div class="row g-4 mb-4">
+  <div class="col-lg-8">
     <div class="card h-100">
-      <div class="card-header d-flex align-items-center justify-content-between">
-        <strong>Stock critico</strong>
-        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('stock.productos_list', low=1) }}">Ver todos</a>
+      <div class="card-header"><strong>Ventas por día</strong></div>
+      <div class="card-body">
+        {% if chart_labels %}
+        <canvas id="chartVentas" height="90"></canvas>
+        {% else %}
+        <p class="text-body-secondary mb-0">Sin ventas en este período.</p>
+        {% endif %}
       </div>
-      {% if productos_criticos %}
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Top productos</strong>
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('ventas.ventas_list', preset=rng.preset, desde=rng.desde_iso, hasta=rng.hasta_iso) }}">Ver ventas</a>
+      </div>
+      {% if top_productos %}
       <div class="table-responsive">
-        <table class="table table-sm mb-0 align-middle">
-          <thead><tr><th>SKU</th><th>Producto</th><th class="text-end">Actual</th><th class="text-end">Min</th><th></th></tr></thead>
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>Producto</th><th class="text-end">Vendidos</th><th class="text-end">Ingreso</th></tr></thead>
           <tbody>
-            {% for p in productos_criticos %}
+            {% for p in top_productos %}
             <tr>
-              <td><code>{{ p.sku }}</code></td>
-              <td>{{ p.nombre }}</td>
-              <td class="text-end {% if p.stock_actual <= p.stock_min %}text-warning{% endif %}">{{ p.stock_actual }}</td>
-              <td class="text-end text-body-secondary">{{ p.stock_min }}</td>
-              <td class="text-end"><a class="btn btn-sm btn-success" href="{{ url_for('stock.movimiento_nuevo', producto_id=p.id) }}">+</a></td>
+              <td>
+                <div>{{ p.nombre }}</div>
+                <code class="text-body-secondary small">{{ p.sku }}</code>
+              </td>
+              <td class="text-end">{{ p.vendidos }}</td>
+              <td class="text-end small">{{ p.ingreso|pyg }}</td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
       {% else %}
-      <div class="card-body text-body-secondary">Todo el stock esta por encima del minimo.</div>
+      <div class="card-body text-body-secondary">Sin ventas en este período.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{# Últimas ventas + Movimientos + Stock crítico #}
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Últimas ventas</strong>
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('ventas.ventas_list') }}">Ver todas</a>
+      </div>
+      {% if ventas_periodo %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th class="text-end">Total</th></tr></thead>
+          <tbody>
+            {% for v in ventas_periodo %}
+            <tr>
+              <td><a href="{{ url_for('ventas.venta_detalle', venta_id=v.id) }}" class="text-body-secondary">{{ v.id }}</a></td>
+              <td class="text-body-secondary small">{{ v.fecha.strftime('%d/%m %H:%M') }}</td>
+              <td>{{ v.cliente_nombre or '—' }}</td>
+              <td class="text-end fw-semibold">{{ v.total|pyg }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body text-body-secondary">Sin ventas en este período.</div>
       {% endif %}
     </div>
   </div>
 
   <div class="col-lg-6">
     <div class="card h-100">
-      <div class="card-header d-flex align-items-center justify-content-between">
-        <strong>Ultimos movimientos</strong>
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Últimos movimientos</strong>
         <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('stock.movimientos_list') }}">Ver todos</a>
       </div>
-      {% if ultimos_movs %}
+      {% if movs_periodo %}
       <div class="table-responsive">
-        <table class="table table-sm mb-0 align-middle">
+        <table class="table table-sm align-middle mb-0">
           <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th class="text-end">Cant</th></tr></thead>
           <tbody>
-            {% for m in ultimos_movs %}
+            {% for m in movs_periodo %}
             <tr>
               <td class="text-body-secondary small">{{ m.fecha.strftime('%d/%m %H:%M') }}</td>
               <td>{{ m.producto.nombre if m.producto else '?' }}</td>
@@ -91,9 +184,84 @@
         </table>
       </div>
       {% else %}
-      <div class="card-body text-body-secondary">Aun no hay movimientos registrados.</div>
+      <div class="card-body text-body-secondary">Sin movimientos en este período.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Stock crítico</strong>
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('stock.productos_list', low=1) }}">Ver todos</a>
+      </div>
+      {% if productos_criticos %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead><tr><th>SKU</th><th>Producto</th><th class="text-end">Actual</th><th class="text-end">Mínimo</th><th class="text-end">Acción</th></tr></thead>
+          <tbody>
+            {% for p in productos_criticos %}
+            <tr>
+              <td><code>{{ p.sku }}</code></td>
+              <td>{{ p.nombre }}</td>
+              <td class="text-end text-warning fw-semibold">{{ p.stock_actual }}</td>
+              <td class="text-end text-body-secondary">{{ p.stock_min }}</td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-success" href="{{ url_for('stock.movimiento_nuevo', producto_id=p.id) }}">+ Ingreso</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body text-body-secondary">Todo el stock está por encima del mínimo.</div>
       {% endif %}
     </div>
   </div>
 </div>
+
+{% if chart_labels %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const labels = {{ chart_labels | tojson }};
+  const values = {{ chart_values | tojson }};
+  const ctx = document.getElementById("chartVentas");
+  new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Ventas Gs.",
+        data: values,
+        backgroundColor: "rgba(25, 135, 84, 0.6)",
+        borderColor: "rgba(25, 135, 84, 1)",
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => "Gs. " + ctx.parsed.y.toLocaleString("es-PY")
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (v) => "Gs. " + v.toLocaleString("es-PY")
+          }
+        }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

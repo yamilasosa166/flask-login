@@ -108,3 +108,57 @@ class Movimiento(db.Model):
 
     def __repr__(self) -> str:
         return f"<Movimiento {self.tipo} {self.cantidad} prod={self.producto_id}>"
+
+
+class Venta(db.Model):
+    __tablename__ = "ventas"
+
+    id = db.Column(db.Integer, primary_key=True)
+    cliente_nombre = db.Column(db.String(120), nullable=True)
+    notas = db.Column(db.String(255), nullable=True)
+    total = db.Column(db.Integer, nullable=False, default=0, server_default="0")  # snapshot suma items
+    usuario_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False, index=True)
+    fecha = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    items = db.relationship(
+        "VentaItem",
+        back_populates="venta",
+        cascade="all, delete-orphan",
+        lazy="joined",
+        order_by="VentaItem.id",
+    )
+    usuario = db.relationship("User")
+
+    __table_args__ = (
+        CheckConstraint("total >= 0", name="ventas_total_no_negativo"),
+    )
+
+    @property
+    def cantidad_items(self) -> int:
+        return sum(i.cantidad for i in self.items)
+
+    def __repr__(self) -> str:
+        return f"<Venta #{self.id} total={self.total}>"
+
+
+class VentaItem(db.Model):
+    __tablename__ = "venta_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+    venta_id = db.Column(db.Integer, db.ForeignKey("ventas.id", ondelete="CASCADE"), nullable=False, index=True)
+    producto_id = db.Column(db.Integer, db.ForeignKey("productos.id", ondelete="RESTRICT"), nullable=False, index=True)
+    cantidad = db.Column(db.Integer, nullable=False)
+    precio_unitario = db.Column(db.Integer, nullable=False)  # snapshot al momento de la venta
+    subtotal = db.Column(db.Integer, nullable=False)  # cantidad * precio_unitario (denormalizado)
+
+    venta = db.relationship("Venta", back_populates="items")
+    producto = db.relationship("Producto")
+
+    __table_args__ = (
+        CheckConstraint("cantidad > 0", name="venta_items_cantidad_positiva"),
+        CheckConstraint("precio_unitario >= 0", name="venta_items_precio_no_negativo"),
+        CheckConstraint("subtotal >= 0", name="venta_items_subtotal_no_negativo"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<VentaItem v={self.venta_id} prod={self.producto_id} x{self.cantidad}>"
