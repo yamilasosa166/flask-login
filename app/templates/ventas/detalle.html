@@ -40,7 +40,9 @@
             {% for item in venta.items %}
             {% set prod = item.producto %}
             {% if current_user.is_admin and prod and prod.precio_costo %}
-              {% set ganancia_item = (item.precio_unitario - prod.precio_costo) * item.cantidad %}
+              {% set tp = prod.tipos_precio | selectattr('nombre', 'equalto', item.tipo_precio_nombre) | list | first | default(None) %}
+              {% set unidades_tp = tp.unidades if tp else 1 %}
+              {% set ganancia_item = (item.precio_unitario - prod.precio_costo * unidades_tp) * item.cantidad %}
               {% set total_ganancia.val = total_ganancia.val + ganancia_item %}
             {% endif %}
             <tr>
@@ -53,7 +55,9 @@
               {% if current_user.is_admin %}
               <td class="text-end">
                 {% if prod and prod.precio_costo %}
-                  {% set g = (item.precio_unitario - prod.precio_costo) * item.cantidad %}
+                  {% set tp2 = prod.tipos_precio | selectattr('nombre', 'equalto', item.tipo_precio_nombre) | list | first | default(None) %}
+                  {% set u2 = tp2.unidades if tp2 else 1 %}
+                  {% set g = (item.precio_unitario - prod.precio_costo * u2) * item.cantidad %}
                   <span class="{% if g >= 0 %}text-success{% else %}text-danger{% endif %}">{{ g|pyg }}</span>
                 {% else %}
                   <span class="text-body-secondary">—</span>

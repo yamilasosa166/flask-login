@@ -130,7 +130,7 @@ def producto_nuevo():
         db.session.add(prod)
         try:
             db.session.flush()
-            _save_tipos_precio(prod.id, data["tipo_nombres"], data["tipo_precios"])
+            _save_tipos_precio(prod.id, data["tipo_nombres"], data["tipo_precios"], data["tipo_unidades"])
             if data["stock_inicial"] > 0:
                 db.session.add(Movimiento(
                     producto_id=prod.id,
@@ -169,7 +169,7 @@ def producto_editar(prod_id: int):
         prod.precio_costo = data["precio_costo"]
         prod.activo = data["activo"]
         try:
-            _save_tipos_precio(prod.id, data["tipo_nombres"], data["tipo_precios"])
+            _save_tipos_precio(prod.id, data["tipo_nombres"], data["tipo_precios"], data["tipo_unidades"])
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
@@ -180,10 +180,10 @@ def producto_editar(prod_id: int):
     return render_template("stock/producto_form.html", producto=prod, categorias=categorias, form=None)
 
 
-def _save_tipos_precio(producto_id: int, nombres: list, precios: list) -> None:
+def _save_tipos_precio(producto_id: int, nombres: list, precios: list, unidades_list: list) -> None:
     db.session.execute(delete(TipoPrecio).where(TipoPrecio.producto_id == producto_id))
-    for nombre, precio in zip(nombres, precios):
-        db.session.add(TipoPrecio(producto_id=producto_id, nombre=nombre, precio=precio))
+    for nombre, precio, unidades in zip(nombres, precios, unidades_list):
+        db.session.add(TipoPrecio(producto_id=producto_id, nombre=nombre, precio=precio, unidades=unidades))
 
 
 def _read_producto_form(form, edit: bool = False) -> dict:
@@ -211,12 +211,14 @@ def _read_producto_form(form, edit: bool = False) -> dict:
         stock_inicial = -1
     activo = form.get("activo") == "on" if edit else True
 
-    # Tipos de precio: arrays paralelos tipo_nombre[] y tipo_precio[]
+    # Tipos de precio: arrays paralelos tipo_nombre[], tipo_precio[], tipo_unidades[]
     tipo_nombres_raw = form.getlist("tipo_nombre")
     tipo_precios_raw = form.getlist("tipo_precio")
+    tipo_unidades_raw = form.getlist("tipo_unidades")
     tipo_nombres = []
     tipo_precios = []
-    for n, p in zip(tipo_nombres_raw, tipo_precios_raw):
+    tipo_unidades = []
+    for n, p, u in zip(tipo_nombres_raw, tipo_precios_raw, tipo_unidades_raw):
         n = n.strip()
         if not n:
             continue
@@ -224,8 +226,13 @@ def _read_producto_form(form, edit: bool = False) -> dict:
             precio = int(p or 0)
         except ValueError:
             precio = -1
+        try:
+            u_int = max(1, int(u or 1))
+        except ValueError:
+            u_int = 1
         tipo_nombres.append(n)
         tipo_precios.append(precio)
+        tipo_unidades.append(u_int)
 
     error = None
     if not sku:
@@ -249,6 +256,7 @@ def _read_producto_form(form, edit: bool = False) -> dict:
         "categoria_id": categoria_id,
         "tipo_nombres": tipo_nombres,
         "tipo_precios": tipo_precios,
+        "tipo_unidades": tipo_unidades,
         "stock_min": stock_min,
         "precio_costo": precio_costo,
         "stock_inicial": stock_inicial,

@@ -63,8 +63,9 @@
             {{ p.precio_costo|pyg if p.precio_costo else '—' }}
           </td>
           <td class="text-end">
-            {% if p.precio_costo and p.precio_base %}
-              {% set m = p.margen_de(p.precio_base) %}
+            {% if p.precio_costo and p.tipos_precio %}
+              {% set t0 = p.tipos_precio[0] %}
+              {% set m = p.margen_de(t0.precio, t0.unidades) %}
               <span class="{% if m.ganancia >= 0 %}text-success{% else %}text-danger{% endif %} fw-semibold">
                 {{ m.pct }}%
               </span>

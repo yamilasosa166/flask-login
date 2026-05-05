@@ -72,6 +72,7 @@
                       <tr>
                         <th>Nombre <span class="text-body-secondary fw-normal small">(ej: Unidad, Pack x6, Promo 3x10k)</span></th>
                         <th style="width:160px">Precio (Gs.)</th>
+                        <th style="width:100px">Unidades <span class="text-body-secondary fw-normal small">que cubre</span></th>
                         <th style="width:48px"></th>
                       </tr>
                     </thead>
@@ -81,6 +82,7 @@
                         <tr class="tipo-row">
                           <td><input class="form-control form-control-sm" type="text" name="tipo_nombre" value="{{ t.nombre }}" placeholder="Ej: Unidad" maxlength="60" required></td>
                           <td><input class="form-control form-control-sm" type="number" name="tipo_precio" value="{{ t.precio }}" min="0" step="1" required></td>
+                          <td><input class="form-control form-control-sm" type="number" name="tipo_unidades" value="{{ t.unidades }}" min="1" step="1" required></td>
                           <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-tipo"><i class="bi bi-x-lg"></i></button></td>
                         </tr>
                         {% endfor %}
@@ -88,6 +90,7 @@
                         <tr class="tipo-row">
                           <td><input class="form-control form-control-sm" type="text" name="tipo_nombre" value="Unidad" placeholder="Ej: Unidad" maxlength="60" required></td>
                           <td><input class="form-control form-control-sm" type="number" name="tipo_precio" value="0" min="0" step="1" required></td>
+                          <td><input class="form-control form-control-sm" type="number" name="tipo_unidades" value="1" min="1" step="1" required></td>
                           <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-tipo" disabled><i class="bi bi-x-lg"></i></button></td>
                         </tr>
                       {% endif %}
@@ -131,6 +134,7 @@
     row.innerHTML = `
       <td><input class="form-control form-control-sm" type="text" name="tipo_nombre" placeholder="Ej: Pack x6" maxlength="60" required></td>
       <td><input class="form-control form-control-sm" type="number" name="tipo_precio" value="0" min="0" step="1" required></td>
+      <td><input class="form-control form-control-sm" type="number" name="tipo_unidades" value="1" min="1" step="1" required></td>
       <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-tipo"><i class="bi bi-x-lg"></i></button></td>`;
     body.appendChild(row);
     bindRow(row);

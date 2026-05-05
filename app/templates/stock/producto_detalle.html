@@ -156,9 +156,12 @@
           </thead>
           <tbody>
             {% for t in prod.tipos_precio %}
-            {% set m = prod.margen_de(t.precio) %}
+            {% set m = prod.margen_de(t.precio, t.unidades) %}
             <tr>
-              <td class="text-body-secondary">{{ t.nombre }}</td>
+              <td class="text-body-secondary">
+                {{ t.nombre }}
+                {% if t.unidades > 1 %}<span class="badge text-bg-secondary ms-1">×{{ t.unidades }}u</span>{% endif %}
+              </td>
               <td class="text-end fw-semibold">{{ t.precio|pyg }}</td>
               {% if current_user.is_admin and prod.precio_costo %}
               <td class="text-end {% if m.ganancia >= 0 %}text-success{% else %}text-danger{% endif %}">

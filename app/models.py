@@ -85,9 +85,10 @@ class Producto(db.Model):
     def precio_base(self) -> int:
         return self.tipos_precio[0].precio if self.tipos_precio else 0
 
-    def margen_de(self, precio_venta: int) -> dict:
-        """Ganancia y % de margen dado un precio de venta."""
-        ganancia = precio_venta - self.precio_costo
+    def margen_de(self, precio_venta: int, unidades: int = 1) -> dict:
+        """Ganancia y % de margen dado un precio de venta y cuántas unidades cubre ese precio."""
+        costo_total = self.precio_costo * max(unidades, 1)
+        ganancia = precio_venta - costo_total
         pct = round(ganancia * 100 / precio_venta, 1) if precio_venta > 0 else 0.0
         return {"ganancia": ganancia, "pct": pct}
 
@@ -102,6 +103,7 @@ class TipoPrecio(db.Model):
     producto_id = db.Column(db.Integer, db.ForeignKey("productos.id", ondelete="CASCADE"), nullable=False, index=True)
     nombre = db.Column(db.String(60), nullable=False)
     precio = db.Column(db.Integer, nullable=False, default=0)
+    unidades = db.Column(db.Integer, nullable=False, default=1, server_default="1")
 
     producto = db.relationship("Producto", back_populates="tipos_precio")
 
