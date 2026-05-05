@@ -295,12 +295,14 @@ def productos_export_csv():
 def producto_detalle(prod_id: int):
     prod = db.session.get(Producto, prod_id) or abort(404)
     tipo = request.args.get("tipo") or ""
+    page = request.args.get("page", 1, type=int)
 
     stmt = db.select(Movimiento).where(Movimiento.producto_id == prod_id)
     if tipo in {"entrada", "salida", "ajuste"}:
         stmt = stmt.where(Movimiento.tipo == tipo)
-    stmt = stmt.order_by(desc(Movimiento.fecha)).limit(200)
-    movimientos = db.session.execute(stmt).scalars().all()
+    stmt = stmt.order_by(desc(Movimiento.fecha))
+
+    paginacion = db.paginate(stmt, page=page, per_page=50, error_out=False)
 
     stats_rows = db.session.execute(
         db.select(
@@ -316,7 +318,7 @@ def producto_detalle(prod_id: int):
     return render_template(
         "stock/producto_detalle.html",
         prod=prod,
-        movimientos=movimientos,
+        paginacion=paginacion,
         tipo=tipo,
         stats=stats,
     )

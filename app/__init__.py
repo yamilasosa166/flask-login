@@ -6,6 +6,7 @@ from flask_login import LoginManager
 from flask_wtf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_mail import Mail
 
 db = SQLAlchemy()
 migrate = Migrate()
@@ -15,6 +16,7 @@ login_manager.login_message = "Inicia sesion para acceder."
 login_manager.login_message_category = "warning"
 csrf = CSRFProtect()
 limiter = Limiter(key_func=get_remote_address, default_limits=[])
+mail = Mail()
 
 
 def create_app() -> Flask:
@@ -22,12 +24,19 @@ def create_app() -> Flask:
     app.config["SECRET_KEY"] = os.environ["SECRET_KEY"]
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ["DATABASE_URL"]
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["MAIL_SERVER"] = os.environ.get("MAIL_SERVER", "localhost")
+    app.config["MAIL_PORT"] = int(os.environ.get("MAIL_PORT", 1025))
+    app.config["MAIL_USE_TLS"] = os.environ.get("MAIL_USE_TLS", "false").lower() == "true"
+    app.config["MAIL_USERNAME"] = os.environ.get("MAIL_USERNAME") or None
+    app.config["MAIL_PASSWORD"] = os.environ.get("MAIL_PASSWORD") or None
+    app.config["MAIL_DEFAULT_SENDER"] = os.environ.get("MAIL_DEFAULT_SENDER", "sistema@stock.local")
 
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
+    mail.init_app(app)
 
     from .models import User
 

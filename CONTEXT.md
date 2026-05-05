@@ -4,6 +4,8 @@
 Sistema simple de gestion de inventario sobre el login: productos, categorias, movimientos (entrada/salida/ajuste) con auditoria de stock, permisos por rol y registro de ventas multi-producto.
 
 ## Completado
+- Paginacion del historial de producto: 50 por pagina con controles prev/next/paginas
+- Reset de password por email: token firmado con itsdangerous (1h expiry), Mailpit para dev (puerto 8025)
 - CSRF tokens en todos los forms POST (Flask-WTF 1.2.2)
 - Rate limiting en /login: 10 POST por minuto por IP (Flask-Limiter 3.10.1)
 - Export CSV de inventario: GET /stock/productos/export.csv — todos los productos con precios
@@ -38,8 +40,6 @@ Sistema simple de gestion de inventario sobre el login: productos, categorias, m
 
 ## Pendiente
 - Tests con pytest
-- Reset de password por email
-- Vista detalle de producto: paginacion del historial (hoy hard limit 200)
 - Reportes: valuacion historica, alertas configurables
 
 ## Blockers
