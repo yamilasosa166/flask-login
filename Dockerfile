@@ -37,7 +37,7 @@ RUN chown -R app:app /app
 
 COPY --from=builder /opt/venv /opt/venv
 COPY --chown=app:app . .
-RUN chmod +x docker/entrypoint.sh
+RUN sed -i 's/\r//' docker/entrypoint.sh && chmod +x docker/entrypoint.sh
 
 USER app
 

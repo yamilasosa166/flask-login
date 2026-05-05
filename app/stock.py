@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from . import db
 from .models import Categoria, Producto, Movimiento
 from .decorators import admin_required
+from .time_filters import parse_range
 
 stock_bp = Blueprint("stock", __name__, url_prefix="/stock")
 
@@ -231,10 +232,22 @@ def _read_producto_form(form, edit: bool = False) -> dict:
 @stock_bp.route("/movimientos")
 @login_required
 def movimientos_list():
-    movs = db.session.execute(
-        db.select(Movimiento).order_by(desc(Movimiento.fecha)).limit(200)
-    ).scalars().all()
-    return render_template("stock/movimientos_list.html", movimientos=movs)
+    rng = parse_range(
+        request.args.get("preset"),
+        request.args.get("desde"),
+        request.args.get("hasta"),
+    )
+    tipo = request.args.get("tipo") or ""
+
+    stmt = db.select(Movimiento).where(
+        Movimiento.fecha >= rng["desde"], Movimiento.fecha <= rng["hasta"]
+    )
+    if tipo in {"entrada", "salida", "ajuste"}:
+        stmt = stmt.where(Movimiento.tipo == tipo)
+    stmt = stmt.order_by(desc(Movimiento.fecha)).limit(500)
+
+    movs = db.session.execute(stmt).scalars().all()
+    return render_template("stock/movimientos_list.html", movimientos=movs, rng=rng, tipo=tipo)
 
 
 @stock_bp.route("/movimientos/nuevo", methods=["GET", "POST"])

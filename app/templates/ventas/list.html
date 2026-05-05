@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Ventas · stock{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <div>
+    <h1 class="h3 mb-0">Ventas</h1>
+    <small class="text-body-secondary">{{ rng.label }}</small>
+  </div>
+  <a class="btn btn-success" href="{{ url_for('ventas.venta_nueva') }}">
+    <i class="bi bi-plus-lg"></i> Nueva venta
+  </a>
+</div>
+
+{# Filtro de rango #}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+  <div class="btn-group btn-group-sm">
+    <a class="btn btn-outline-secondary {% if rng.preset == 'hoy' %}active{% endif %}" href="?preset=hoy">Hoy</a>
+    <a class="btn btn-outline-secondary {% if rng.preset == '7d' %}active{% endif %}" href="?preset=7d">7 días</a>
+    <a class="btn btn-outline-secondary {% if rng.preset == '30d' %}active{% endif %}" href="?preset=30d">30 días</a>
+    <a class="btn btn-outline-secondary {% if rng.preset == 'mes' %}active{% endif %}" href="?preset=mes">Este mes</a>
+    <a class="btn btn-outline-secondary {% if rng.preset == 'anio' %}active{% endif %}" href="?preset=anio">Este año</a>
+  </div>
+  <form class="d-flex align-items-center gap-2" method="get">
+    <input type="hidden" name="preset" value="custom">
+    <input class="form-control form-control-sm" type="date" name="desde" value="{{ rng.desde_iso }}" style="width:145px">
+    <span class="text-body-secondary">→</span>
+    <input class="form-control form-control-sm" type="date" name="hasta" value="{{ rng.hasta_iso }}" style="width:145px">
+    <button class="btn btn-sm btn-outline-primary" type="submit">Aplicar</button>
+  </form>
+</div>
+
+{# KPIs #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-body-secondary small">Total período</div>
+      <div class="h5 mb-0">{{ total_periodo|pyg }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-body-secondary small">Ventas</div>
+      <div class="h3 mb-0">{{ n_ventas }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-body-secondary small">Ítems vendidos</div>
+      <div class="h3 mb-0">{{ items_vendidos }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-body-secondary small">Ticket promedio</div>
+      <div class="h5 mb-0">{{ ticket_promedio|pyg }}</div>
+    </div></div>
+  </div>
+</div>
+
+{# Tabla #}
+{% if ventas %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Fecha</th>
+          <th>Cliente</th>
+          <th class="text-end">Ítems</th>
+          <th class="text-end">Total</th>
+          <th>Usuario</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in ventas %}
+        <tr>
+          <td class="text-body-secondary">{{ v.id }}</td>
+          <td class="text-body-secondary small">{{ v.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td>{{ v.cliente_nombre or '—' }}</td>
+          <td class="text-end">{{ v.cantidad_items }}</td>
+          <td class="text-end fw-semibold">{{ v.total|pyg }}</td>
+          <td class="text-body-secondary small">{{ v.usuario.username if v.usuario else '?' }}</td>
+          <td class="text-end">
+            <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('ventas.venta_detalle', venta_id=v.id) }}">
+              Ver
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="alert alert-secondary">No hay ventas registradas en este período.</div>
+{% endif %}
+{% endblock %}

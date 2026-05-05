@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Venta #{{ venta.id }} · stock{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h3 mb-1">Venta #{{ venta.id }}</h1>
+    <small class="text-body-secondary">
+      {{ venta.fecha.strftime('%d/%m/%Y %H:%M') }} — registrada por {{ venta.usuario.username if venta.usuario else '?' }}
+    </small>
+  </div>
+  <a class="btn btn-outline-secondary" href="{{ url_for('ventas.ventas_list') }}">
+    <i class="bi bi-arrow-left"></i> Volver
+  </a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><strong>Ítems</strong></div>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead>
+            <tr>
+              <th>SKU</th>
+              <th>Producto</th>
+              <th class="text-end">Precio unit.</th>
+              <th class="text-end">Cantidad</th>
+              <th class="text-end">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in venta.items %}
+            <tr>
+              <td><code class="text-body-secondary">{{ item.producto.sku if item.producto else '?' }}</code></td>
+              <td>{{ item.producto.nombre if item.producto else '(producto eliminado)' }}</td>
+              <td class="text-end text-body-secondary">{{ item.precio_unitario|pyg }}</td>
+              <td class="text-end">{{ item.cantidad }}</td>
+              <td class="text-end fw-semibold">{{ item.subtotal|pyg }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr class="table-group-divider">
+              <td colspan="4" class="text-end fw-semibold">Total</td>
+              <td class="text-end fw-bold fs-5">{{ venta.total|pyg }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header"><strong>Información</strong></div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-5 text-body-secondary">Cliente</dt>
+          <dd class="col-7">{{ venta.cliente_nombre or '—' }}</dd>
+          <dt class="col-5 text-body-secondary">Notas</dt>
+          <dd class="col-7">{{ venta.notas or '—' }}</dd>
+          <dt class="col-5 text-body-secondary">Ítems</dt>
+          <dd class="col-7">{{ venta.cantidad_items }}</dd>
+          <dt class="col-5 text-body-secondary">Total</dt>
+          <dd class="col-7 fw-semibold">{{ venta.total|pyg }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

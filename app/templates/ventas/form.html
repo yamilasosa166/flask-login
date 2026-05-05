@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block title %}Nueva venta · stock{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="h3 mb-0">Nueva venta</h1>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('ventas.ventas_list') }}">Cancelar</a>
+    </div>
+
+    {% if not productos %}
+    <div class="alert alert-warning">
+      No hay productos activos con stock disponible. <a href="{{ url_for('stock.movimiento_nuevo') }}">Registrá un ingreso primero</a>.
+    </div>
+    {% else %}
+    <form method="post" novalidate id="ventaForm">
+
+      {# --- Ítems --- #}
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <strong>Productos</strong>
+          <button type="button" class="btn btn-sm btn-outline-success" id="btnAgregar">
+            <i class="bi bi-plus-lg"></i> Agregar producto
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0" id="itemsTable">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th class="text-end" style="width:130px">Precio unit.</th>
+                <th style="width:110px">Cantidad</th>
+                <th class="text-end" style="width:140px">Subtotal</th>
+                <th style="width:48px"></th>
+              </tr>
+            </thead>
+            <tbody id="itemsBody">
+              {# Fila inicial (siempre se muestra una) #}
+              <tr class="item-row">
+                <td>
+                  <select class="form-select form-select-sm producto-select" name="producto_id" required>
+                    <option value="">— elegir —</option>
+                    {% for p in productos %}
+                    <option value="{{ p.id }}" data-precio="{{ p.precio }}" data-stock="{{ p.stock_actual }}">
+                      {{ p.sku }} · {{ p.nombre }} (stock: {{ p.stock_actual }})
+                    </option>
+                    {% endfor %}
+                  </select>
+                </td>
+                <td class="text-end text-body-secondary precio-cell">—</td>
+                <td>
+                  <input class="form-control form-control-sm cantidad-input" name="cantidad" type="number" min="1" step="1" value="1" required>
+                </td>
+                <td class="text-end fw-semibold subtotal-cell">—</td>
+                <td class="text-center">
+                  <button type="button" class="btn btn-sm btn-outline-danger btn-remove" tabindex="-1" disabled>
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="table-group-divider">
+                <td colspan="3" class="text-end fw-semibold">Total estimado</td>
+                <td class="text-end fw-bold fs-5" id="totalDisplay">Gs. 0</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      {# --- Datos opcionales --- #}
+      <div class="card mb-4">
+        <div class="card-header"><strong>Datos opcionales</strong></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="cliente_nombre">Cliente</label>
+              <input class="form-control" id="cliente_nombre" name="cliente_nombre" maxlength="120"
+                     value="{{ (form.cliente_nombre if form else '') or '' }}"
+                     placeholder="Nombre o razón social">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="notas">Notas</label>
+              <input class="form-control" id="notas" name="notas" maxlength="255"
+                     value="{{ (form.notas if form else '') or '' }}"
+                     placeholder="Observaciones internas">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button class="btn btn-success" type="submit">
+          <i class="bi bi-check-lg"></i> Registrar venta
+        </button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('ventas.ventas_list') }}">Cancelar</a>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+(function () {
+  const body    = document.getElementById("itemsBody");
+  const btnAdd  = document.getElementById("btnAgregar");
+  const total   = document.getElementById("totalDisplay");
+
+  // Template de opciones de producto (se clona desde la primera fila)
+  const optsHTML = body.querySelector(".producto-select").innerHTML;
+
+  function fmt(n) {
+    return "Gs. " + n.toLocaleString("es-PY");
+  }
+
+  function recalc() {
+    let sum = 0;
+    body.querySelectorAll(".item-row").forEach(row => {
+      const sel  = row.querySelector(".producto-select");
+      const cant = row.querySelector(".cantidad-input");
+      const opt  = sel.selectedOptions[0];
+      const precioCell    = row.querySelector(".precio-cell");
+      const subtotalCell  = row.querySelector(".subtotal-cell");
+
+      if (opt && opt.value) {
+        const precio   = parseInt(opt.dataset.precio || "0", 10);
+        const cantidad = Math.max(1, parseInt(cant.value || "1", 10));
+        const sub      = precio * cantidad;
+        precioCell.textContent   = fmt(precio);
+        subtotalCell.textContent = fmt(sub);
+        sum += sub;
+
+        // Clamp cantidad al stock disponible
+        const stock = parseInt(opt.dataset.stock || "0", 10);
+        if (parseInt(cant.value, 10) > stock) {
+          cant.value = stock;
+          recalc();
+          return;
+        }
+      } else {
+        precioCell.textContent   = "—";
+        subtotalCell.textContent = "—";
+      }
+    });
+    total.textContent = fmt(sum);
+  }
+
+  function updateRemoveButtons() {
+    const rows = body.querySelectorAll(".item-row");
+    rows.forEach(r => {
+      r.querySelector(".btn-remove").disabled = rows.length === 1;
+    });
+  }
+
+  function addRow() {
+    const row = document.createElement("tr");
+    row.className = "item-row";
+    row.innerHTML = `
+      <td>
+        <select class="form-select form-select-sm producto-select" name="producto_id" required>
+          ${optsHTML}
+        </select>
+      </td>
+      <td class="text-end text-body-secondary precio-cell">—</td>
+      <td>
+        <input class="form-control form-control-sm cantidad-input" name="cantidad" type="number" min="1" step="1" value="1" required>
+      </td>
+      <td class="text-end fw-semibold subtotal-cell">—</td>
+      <td class="text-center">
+        <button type="button" class="btn btn-sm btn-outline-danger btn-remove" tabindex="-1">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </td>`;
+    body.appendChild(row);
+    bindRow(row);
+    updateRemoveButtons();
+    row.querySelector(".producto-select").focus();
+  }
+
+  function bindRow(row) {
+    row.querySelector(".producto-select").addEventListener("change", recalc);
+    row.querySelector(".cantidad-input").addEventListener("input", recalc);
+    row.querySelector(".btn-remove").addEventListener("click", function () {
+      row.remove();
+      updateRemoveButtons();
+      recalc();
+    });
+  }
+
+  // Bind fila inicial
+  bindRow(body.querySelector(".item-row"));
+  btnAdd.addEventListener("click", addRow);
+  recalc();
+})();
+</script>
+{% endblock %}
