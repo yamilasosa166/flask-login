@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Mi turno · stock{% endblock %}
+{% block content %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
+  <div>
+    <h1 class="h3 mb-0">Mi turno</h1>
+    <small class="text-body-secondary">{{ current_user.username }} · {{ rng.label }}</small>
+  </div>
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    {# Selector de rango #}
+    <div class="btn-group btn-group-sm">
+      <a class="btn btn-outline-secondary {% if rng.preset == 'hoy' %}active{% endif %}" href="?preset=hoy">Hoy</a>
+      <a class="btn btn-outline-secondary {% if rng.preset == '7d' %}active{% endif %}" href="?preset=7d">7 días</a>
+      <a class="btn btn-outline-secondary {% if rng.preset == 'mes' %}active{% endif %}" href="?preset=mes">Este mes</a>
+    </div>
+    <a class="btn btn-success" href="{{ url_for('ventas.venta_nueva') }}">
+      <i class="bi bi-plus-lg"></i> Nueva venta
+    </a>
+  </div>
+</div>
+
+{# KPIs #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card h-100 border-success-subtle">
+      <div class="card-body">
+        <div class="text-body-secondary small">Mis ventas</div>
+        <div class="h2 mb-0">{{ ventas_count }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100 border-success-subtle">
+      <div class="card-body">
+        <div class="text-body-secondary small">Total cobrado</div>
+        <div class="h4 mb-0 text-success">{{ ventas_total|pyg }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="text-body-secondary small">Ítems vendidos</div>
+        <div class="h2 mb-0">{{ ventas_items }}</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="text-body-secondary small">Ticket promedio</div>
+        <div class="h4 mb-0">{{ ticket_promedio|pyg }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Ventas + Movimientos #}
+<div class="row g-4">
+
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Mis ventas</strong>
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('ventas.ventas_list', preset=rng.preset) }}">Ver todas</a>
+      </div>
+      {% if mis_ventas %}
+      <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Hora</th>
+              <th>Cliente</th>
+              <th class="text-end">Ítems</th>
+              <th class="text-end">Total</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for v in mis_ventas %}
+            <tr>
+              <td class="text-body-secondary">{{ v.id }}</td>
+              <td class="text-body-secondary">{{ v.fecha.strftime('%H:%M') }}</td>
+              <td>{{ v.cliente_nombre or '—' }}</td>
+              <td class="text-end">{{ v.cantidad_items }}</td>
+              <td class="text-end fw-semibold">{{ v.total|pyg }}</td>
+              <td class="text-end text-nowrap">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('ventas.venta_detalle', venta_id=v.id) }}">Ver</a>
+                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('ventas.venta_ticket', venta_id=v.id) }}" target="_blank">
+                  <i class="bi bi-printer"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body text-body-secondary">
+        Todavía no registraste ventas {% if rng.preset == 'hoy' %}hoy{% else %}en este período{% endif %}.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>Mis movimientos <span class="badge text-bg-secondary">{{ movimientos_count }}</span></strong>
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('stock.movimiento_nuevo') }}">+ Movimiento</a>
+      </div>
+      {% if mis_movimientos %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Hora</th>
+              <th>Producto</th>
+              <th>Tipo</th>
+              <th class="text-end">Cant</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in mis_movimientos %}
+            <tr>
+              <td class="text-body-secondary">{{ m.fecha.strftime('%H:%M') }}</td>
+              <td class="small">{{ m.producto.nombre if m.producto else '?' }}</td>
+              <td>
+                {% if m.tipo == 'entrada' %}<span class="badge text-bg-success">entrada</span>
+                {% elif m.tipo == 'salida' %}<span class="badge text-bg-danger">salida</span>
+                {% else %}<span class="badge text-bg-warning">ajuste</span>{% endif %}
+              </td>
+              <td class="text-end">{{ m.cantidad }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body text-body-secondary">Sin movimientos en este período.</div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

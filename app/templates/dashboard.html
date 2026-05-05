@@ -1,21 +1,40 @@
 {% extends "base.html" %}
 {% block title %}Dashboard · stock{% endblock %}
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+<div class="d-flex flex-wrap justify-content-between align-items-start mb-3 gap-2">
   <div>
     <h1 class="h3 mb-0">Dashboard</h1>
-    <small class="text-body-secondary">{{ rng.label }} · {{ current_user.username }}</small>
+    <small class="text-body-secondary">
+      {{ rng.label }}
+      {% if filtro_usuario %} · <span class="text-warning">{{ filtro_usuario.username }}</span>{% endif %}
+    </small>
   </div>
   <div class="d-flex flex-wrap align-items-center gap-2">
+    {# Filtro por usuario #}
+    <form class="d-flex align-items-center gap-1" method="get" id="formUsuario">
+      <input type="hidden" name="preset" value="{{ rng.preset }}">
+      <input type="hidden" name="desde" value="{{ rng.desde_iso }}">
+      <input type="hidden" name="hasta" value="{{ rng.hasta_iso }}">
+      <select class="form-select form-select-sm" name="usuario_id" style="width:160px" onchange="this.form.submit()">
+        <option value="">Todos los usuarios</option>
+        {% for u in users %}
+        <option value="{{ u.id }}" {% if u.id == filtro_uid %}selected{% endif %}>
+          {{ u.username }}{% if u.is_admin %} (admin){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+    </form>
+    {# Filtros de rango #}
     <div class="btn-group btn-group-sm">
-      <a class="btn btn-outline-secondary {% if rng.preset == 'hoy' %}active{% endif %}" href="?preset=hoy">Hoy</a>
-      <a class="btn btn-outline-secondary {% if rng.preset == '7d' %}active{% endif %}" href="?preset=7d">7 días</a>
-      <a class="btn btn-outline-secondary {% if rng.preset == '30d' %}active{% endif %}" href="?preset=30d">30 días</a>
-      <a class="btn btn-outline-secondary {% if rng.preset == 'mes' %}active{% endif %}" href="?preset=mes">Este mes</a>
-      <a class="btn btn-outline-secondary {% if rng.preset == 'anio' %}active{% endif %}" href="?preset=anio">Este año</a>
+      <a class="btn btn-outline-secondary {% if rng.preset == 'hoy' %}active{% endif %}" href="?preset=hoy{% if filtro_uid %}&usuario_id={{ filtro_uid }}{% endif %}">Hoy</a>
+      <a class="btn btn-outline-secondary {% if rng.preset == '7d' %}active{% endif %}" href="?preset=7d{% if filtro_uid %}&usuario_id={{ filtro_uid }}{% endif %}">7 días</a>
+      <a class="btn btn-outline-secondary {% if rng.preset == '30d' %}active{% endif %}" href="?preset=30d{% if filtro_uid %}&usuario_id={{ filtro_uid }}{% endif %}">30 días</a>
+      <a class="btn btn-outline-secondary {% if rng.preset == 'mes' %}active{% endif %}" href="?preset=mes{% if filtro_uid %}&usuario_id={{ filtro_uid }}{% endif %}">Este mes</a>
+      <a class="btn btn-outline-secondary {% if rng.preset == 'anio' %}active{% endif %}" href="?preset=anio{% if filtro_uid %}&usuario_id={{ filtro_uid }}{% endif %}">Este año</a>
     </div>
     <form class="d-flex align-items-center gap-1" method="get">
       <input type="hidden" name="preset" value="custom">
+      {% if filtro_uid %}<input type="hidden" name="usuario_id" value="{{ filtro_uid }}">{% endif %}
       <input class="form-control form-control-sm" type="date" name="desde" value="{{ rng.desde_iso }}" style="width:140px">
       <span class="text-body-secondary">→</span>
       <input class="form-control form-control-sm" type="date" name="hasta" value="{{ rng.hasta_iso }}" style="width:140px">
@@ -23,6 +42,14 @@
     </form>
   </div>
 </div>
+
+{% if filtro_usuario %}
+<div class="alert alert-warning alert-dismissible py-2 mb-3" role="alert">
+  <i class="bi bi-person-fill"></i> Filtrando ventas y movimientos de <strong>{{ filtro_usuario.username }}</strong>.
+  <a href="?preset={{ rng.preset }}" class="alert-link ms-2">Quitar filtro</a>
+  <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
 
 {# KPIs fila 1 — Stock (siempre actuales) #}
 <div class="row g-3 mb-3">
@@ -137,14 +164,23 @@
       {% if ventas_periodo %}
       <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
-          <thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th class="text-end">Total</th></tr></thead>
+          <thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Usuario</th><th class="text-end">Total</th><th></th></tr></thead>
           <tbody>
             {% for v in ventas_periodo %}
             <tr>
-              <td><a href="{{ url_for('ventas.venta_detalle', venta_id=v.id) }}" class="text-body-secondary">{{ v.id }}</a></td>
+              <td class="text-body-secondary">{{ v.id }}</td>
               <td class="text-body-secondary small">{{ v.fecha.strftime('%d/%m %H:%M') }}</td>
               <td>{{ v.cliente_nombre or '—' }}</td>
+              <td>
+                <a class="text-body-secondary small text-decoration-none"
+                   href="?preset={{ rng.preset }}&usuario_id={{ v.usuario_id }}">
+                  {{ v.usuario.username if v.usuario else '?' }}
+                </a>
+              </td>
               <td class="text-end fw-semibold">{{ v.total|pyg }}</td>
+              <td class="text-end">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('ventas.venta_detalle', venta_id=v.id) }}">Ver</a>
+              </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -165,7 +201,7 @@
       {% if movs_periodo %}
       <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
-          <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th class="text-end">Cant</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th class="text-end">Cant</th><th>Usuario</th></tr></thead>
           <tbody>
             {% for m in movs_periodo %}
             <tr>
@@ -174,10 +210,16 @@
               <td>
                 {% if m.tipo == 'entrada' %}<span class="badge text-bg-success">entrada</span>
                 {% elif m.tipo == 'salida' %}<span class="badge text-bg-danger">salida</span>
-                {% else %}<span class="badge text-bg-secondary">ajuste</span>
+                {% else %}<span class="badge text-bg-warning">ajuste</span>
                 {% endif %}
               </td>
               <td class="text-end">{{ m.cantidad }}</td>
+              <td>
+                <a class="text-body-secondary small text-decoration-none"
+                   href="?preset={{ rng.preset }}&usuario_id={{ m.usuario_id }}">
+                  {{ m.usuario.username if m.usuario else '?' }}
+                </a>
+              </td>
             </tr>
             {% endfor %}
           </tbody>
