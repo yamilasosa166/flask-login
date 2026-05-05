@@ -24,7 +24,8 @@ FROM python:3.12-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/opt/venv/bin:$PATH"
+    PATH="/opt/venv/bin:$PATH" \
+    FLASK_APP=wsgi:app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
@@ -32,9 +33,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && groupadd -r app && useradd -r -g app -d /app -s /sbin/nologin app
 
 WORKDIR /app
+RUN chown -R app:app /app
 
 COPY --from=builder /opt/venv /opt/venv
 COPY --chown=app:app . .
+RUN chmod +x docker/entrypoint.sh
 
 USER app
 
@@ -43,4 +46,4 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD curl -fsS http://localhost:5000/health || exit 1
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--access-logfile", "-", "wsgi:app"]
+ENTRYPOINT ["docker/entrypoint.sh"]

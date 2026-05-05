@@ -22,6 +22,12 @@ features:
   - logout
   - dashboard-protegido
   - sesion-persistente
+  - roles-admin-operador
+  - stock-productos
+  - stock-categorias
+  - stock-movimientos
+  - auditoria-stock
+  - moneda-pyg
 
 integrations:
   payments: none

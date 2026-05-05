@@ -1,29 +1,10 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from . import db
 from .models import User
 
 auth_bp = Blueprint("auth", __name__)
-main_bp = Blueprint("main", __name__)
-
-
-@main_bp.route("/")
-def index():
-    if current_user.is_authenticated:
-        return redirect(url_for("main.dashboard"))
-    return redirect(url_for("auth.login"))
-
-
-@main_bp.route("/dashboard")
-@login_required
-def dashboard():
-    return render_template("dashboard.html")
-
-
-@main_bp.route("/health")
-def health():
-    return {"status": "ok"}, 200
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
@@ -51,12 +32,17 @@ def register():
             flash("Usuario o email ya registrado.", "danger")
             return render_template("register.html"), 409
 
-        user = User(username=username, email=email)
+        # Primer usuario registrado queda como admin (bootstrap del sistema).
+        user_count = db.session.execute(db.select(func.count(User.id))).scalar_one()
+        role = "admin" if user_count == 0 else "operador"
+
+        user = User(username=username, email=email, role=role)
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
 
-        flash("Cuenta creada. Ya podes iniciar sesion.", "success")
+        msg = "Cuenta creada como administrador." if role == "admin" else "Cuenta creada. Ya podes iniciar sesion."
+        flash(msg, "success")
         return redirect(url_for("auth.login"))
 
     return render_template("register.html")

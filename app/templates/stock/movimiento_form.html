@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Nuevo movimiento · stock{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-4">Nuevo movimiento</h1>
+
+        {% if not productos %}
+        <div class="alert alert-warning">
+          No hay productos activos. <a href="{{ url_for('stock.producto_nuevo') }}">Crea uno primero</a>.
+        </div>
+        {% else %}
+        <form method="post" novalidate>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label" for="producto_id">Producto</label>
+              <select class="form-select" id="producto_id" name="producto_id" required>
+                <option value="">— elegir producto —</option>
+                {% for p in productos %}
+                {% set selected = (form and form.producto_id|int == p.id) or (preselect_id and preselect_id == p.id) %}
+                <option value="{{ p.id }}" {% if selected %}selected{% endif %}>
+                  {{ p.sku }} · {{ p.nombre }} (stock actual: {{ p.stock_actual }})
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="tipo">Tipo</label>
+              <select class="form-select" id="tipo" name="tipo" required>
+                {% set t = (form.tipo if form else 'entrada') %}
+                <option value="entrada" {% if t == 'entrada' %}selected{% endif %}>Entrada (+)</option>
+                <option value="salida"  {% if t == 'salida'  %}selected{% endif %}>Salida (-)</option>
+                <option value="ajuste"  {% if t == 'ajuste'  %}selected{% endif %}>Ajuste (= nuevo total)</option>
+              </select>
+              <div class="form-text">
+                Entrada suma · Salida resta · Ajuste reemplaza el stock por el valor indicado.
+              </div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="cantidad">Cantidad</label>
+              <input class="form-control" id="cantidad" name="cantidad" type="number" min="1" step="1"
+                     value="{{ (form.cantidad if form else 1) }}" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label" for="motivo">Motivo (opcional)</label>
+              <input class="form-control" id="motivo" name="motivo" maxlength="255"
+                     value="{{ (form.motivo if form else '') or '' }}"
+                     placeholder="Ej: Compra a proveedor X · Venta cliente Y · Conteo fisico">
+            </div>
+          </div>
+
+          <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-primary" type="submit">Registrar</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('stock.movimientos_list') }}">Cancelar</a>
+          </div>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

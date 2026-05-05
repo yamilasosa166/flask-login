@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if producto else 'Nuevo' }} producto · stock{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-4">{{ 'Editar' if producto else 'Nuevo' }} producto</h1>
+        <form method="post" novalidate>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label" for="sku">SKU</label>
+              <input class="form-control text-uppercase" id="sku" name="sku" maxlength="40"
+                     value="{{ (form.sku if form else (producto.sku if producto else '')) or '' }}" required>
+            </div>
+            <div class="col-md-8">
+              <label class="form-label" for="nombre">Nombre</label>
+              <input class="form-control" id="nombre" name="nombre" maxlength="120"
+                     value="{{ (form.nombre if form else (producto.nombre if producto else '')) or '' }}" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="categoria_id">Categoria</label>
+              <select class="form-select" id="categoria_id" name="categoria_id">
+                <option value="">— sin categoria —</option>
+                {% for c in categorias %}
+                <option value="{{ c.id }}" {% if (form and form.categoria_id|int == c.id) or (producto and producto.categoria_id == c.id) %}selected{% endif %}>{{ c.nombre }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="precio">Precio (Gs.)</label>
+              <input class="form-control" id="precio" name="precio" type="number" min="0" step="1"
+                     value="{{ (form.precio if form else (producto.precio if producto else 0)) }}" required>
+            </div>
+            {% if not producto %}
+            <div class="col-md-6">
+              <label class="form-label" for="stock_inicial">Stock inicial</label>
+              <input class="form-control" id="stock_inicial" name="stock_inicial" type="number" min="0" step="1"
+                     value="{{ (form.stock_inicial if form else 0) }}">
+              <div class="form-text">Si es &gt; 0 se registra como movimiento de entrada.</div>
+            </div>
+            {% endif %}
+            <div class="col-md-6">
+              <label class="form-label" for="stock_min">Stock minimo</label>
+              <input class="form-control" id="stock_min" name="stock_min" type="number" min="0" step="1"
+                     value="{{ (form.stock_min if form else (producto.stock_min if producto else 0)) }}">
+              <div class="form-text">Avisa cuando el stock baje a este nivel.</div>
+            </div>
+            {% if producto %}
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="activo" name="activo" {% if producto.activo %}checked{% endif %}>
+                <label class="form-check-label" for="activo">Producto activo</label>
+              </div>
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-primary" type="submit">{{ 'Guardar cambios' if producto else 'Crear producto' }}</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('stock.productos_list') }}">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

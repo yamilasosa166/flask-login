@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Movimientos · stock{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Movimientos</h1>
+  <a class="btn btn-success" href="{{ url_for('stock.movimiento_nuevo') }}"><i class="bi bi-plus-lg"></i> Nuevo movimiento</a>
+</div>
+
+{% if movimientos %}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Producto</th>
+          <th>Tipo</th>
+          <th class="text-end">Cantidad</th>
+          <th class="text-end">Stock antes</th>
+          <th class="text-end">Stock despues</th>
+          <th>Usuario</th>
+          <th>Motivo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in movimientos %}
+        <tr>
+          <td class="text-body-secondary small">{{ m.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+          <td>{{ m.producto.nombre if m.producto else '?' }} <code class="small text-body-secondary">{{ m.producto.sku if m.producto else '' }}</code></td>
+          <td>
+            {% if m.tipo == 'entrada' %}<span class="badge text-bg-success">entrada</span>
+            {% elif m.tipo == 'salida' %}<span class="badge text-bg-danger">salida</span>
+            {% else %}<span class="badge text-bg-secondary">ajuste</span>
+            {% endif %}
+          </td>
+          <td class="text-end">{{ m.cantidad }}</td>
+          <td class="text-end text-body-secondary">{{ m.stock_anterior }}</td>
+          <td class="text-end fw-semibold">{{ m.stock_resultante }}</td>
+          <td class="text-body-secondary">{{ m.usuario.username if m.usuario else '?' }}</td>
+          <td class="text-body-secondary small">{{ m.motivo or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<p class="text-body-secondary small mt-2">Mostrando hasta los ultimos 200 movimientos.</p>
+{% else %}
+<div class="alert alert-secondary">Aun no hay movimientos registrados.</div>
+{% endif %}
+{% endblock %}

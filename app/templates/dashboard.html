@@ -1,23 +1,98 @@
 {% extends "base.html" %}
-{% block title %}Dashboard · flask-login{% endblock %}
+{% block title %}Dashboard · stock{% endblock %}
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-md-8">
-    <div class="card shadow-sm">
-      <div class="card-body p-4">
-        <h1 class="h3 mb-3">Hola, {{ current_user.username }}</h1>
-        <p class="text-body-secondary mb-4">Tu sesion esta activa.</p>
-        <dl class="row mb-0">
-          <dt class="col-sm-3">Usuario</dt>
-          <dd class="col-sm-9">{{ current_user.username }}</dd>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1 class="h3 mb-0">Dashboard</h1>
+  <small class="text-body-secondary">Hola, {{ current_user.username }}</small>
+</div>
 
-          <dt class="col-sm-3">Email</dt>
-          <dd class="col-sm-9">{{ current_user.email }}</dd>
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-body-secondary small">Productos activos</div>
+      <div class="h3 mb-0">{{ total_productos }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100 {% if productos_stock_bajo > 0 %}border-warning{% endif %}"><div class="card-body">
+      <div class="text-body-secondary small">Stock bajo</div>
+      <div class="h3 mb-0 {% if productos_stock_bajo > 0 %}text-warning{% endif %}">{{ productos_stock_bajo }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-body-secondary small">Movimientos hoy</div>
+      <div class="h3 mb-0">{{ movimientos_hoy }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-body-secondary small">Valor inventario</div>
+      <div class="h5 mb-0">{{ valor_inventario|pyg }}</div>
+    </div></div>
+  </div>
+</div>
 
-          <dt class="col-sm-3">Cuenta creada</dt>
-          <dd class="col-sm-9">{{ current_user.created_at.strftime('%Y-%m-%d %H:%M UTC') }}</dd>
-        </dl>
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <strong>Stock critico</strong>
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('stock.productos_list', low=1) }}">Ver todos</a>
       </div>
+      {% if productos_criticos %}
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+          <thead><tr><th>SKU</th><th>Producto</th><th class="text-end">Actual</th><th class="text-end">Min</th><th></th></tr></thead>
+          <tbody>
+            {% for p in productos_criticos %}
+            <tr>
+              <td><code>{{ p.sku }}</code></td>
+              <td>{{ p.nombre }}</td>
+              <td class="text-end {% if p.stock_actual <= p.stock_min %}text-warning{% endif %}">{{ p.stock_actual }}</td>
+              <td class="text-end text-body-secondary">{{ p.stock_min }}</td>
+              <td class="text-end"><a class="btn btn-sm btn-success" href="{{ url_for('stock.movimiento_nuevo', producto_id=p.id) }}">+</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body text-body-secondary">Todo el stock esta por encima del minimo.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center justify-content-between">
+        <strong>Ultimos movimientos</strong>
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('stock.movimientos_list') }}">Ver todos</a>
+      </div>
+      {% if ultimos_movs %}
+      <div class="table-responsive">
+        <table class="table table-sm mb-0 align-middle">
+          <thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th class="text-end">Cant</th></tr></thead>
+          <tbody>
+            {% for m in ultimos_movs %}
+            <tr>
+              <td class="text-body-secondary small">{{ m.fecha.strftime('%d/%m %H:%M') }}</td>
+              <td>{{ m.producto.nombre if m.producto else '?' }}</td>
+              <td>
+                {% if m.tipo == 'entrada' %}<span class="badge text-bg-success">entrada</span>
+                {% elif m.tipo == 'salida' %}<span class="badge text-bg-danger">salida</span>
+                {% else %}<span class="badge text-bg-secondary">ajuste</span>
+                {% endif %}
+              </td>
+              <td class="text-end">{{ m.cantidad }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="card-body text-body-secondary">Aun no hay movimientos registrados.</div>
+      {% endif %}
     </div>
   </div>
 </div>
